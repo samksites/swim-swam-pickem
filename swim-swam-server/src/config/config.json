@@ -1,0 +1,23 @@
+{
+    "server": {
+        "port": 3000,
+        "host": "localhost"
+    },
+    "database": {
+        "username": "your_db_username",
+        "database": "swim_swam",
+        "host": "localhost",
+        "port": 5432,
+        "options": {
+            "ssl": false
+        }
+    },
+    "jwt": {
+        "secret": "your_jwt_secret",
+        "expiresIn": "1h"
+    },
+    "logging": {
+        "level": "info",
+        "filePath": "/var/log/swim-swam.log"
+    }
+}
