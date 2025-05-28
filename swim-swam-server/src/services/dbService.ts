@@ -41,5 +41,3 @@ export async function query(query: string, params?: any[]) {
     throw err;
   }
 }
-
-export default pool;

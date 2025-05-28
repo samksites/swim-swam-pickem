@@ -4,8 +4,8 @@
         "host": "localhost"
     },
     "database": {
-        "username": "your_db_username",
-        "database": "swim_swam",
+        "username": "admin",
+        "database": "swimSwamPickem",
         "host": "localhost",
         "port": 5432,
         "options": {
