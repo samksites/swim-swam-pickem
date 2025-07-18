@@ -1,5 +1,4 @@
 import * as React from "react"
-
 import { cn } from "@/lib/utils"
 
 function Input({ className, type, ...props }: React.ComponentProps<"input">) {
@@ -18,4 +17,71 @@ function Input({ className, type, ...props }: React.ComponentProps<"input">) {
   )
 }
 
-export { Input }
+type SwimmerInputProps = {
+    name: string;
+    css?: string;
+}
+
+const SwimmerInput: React.FC<SwimmerInputProps> = (props) => {
+  const [name, setName] = React.useState(props.name);
+  const [time, setTime] = React.useState(""); // raw digits
+
+  // Format time as user types: mm:ss.hh
+  const handleTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Remove all non-digit characters
+    let value = e.target.value.replace(/\D/g, "");
+
+    const firstNonZero = value.search(/[^0]/);
+    if (firstNonZero !== -1) {
+      value = value.slice(firstNonZero);
+      value = value.padStart(6, "0");
+    } else {
+      value = "000000";
+    }
+
+    // Limit to 6 digits (mmsshh)
+    value = value.slice(0, 6);
+
+    // Format as mm:ss.hh
+    let formatted = value;
+    if (value.length > 4) {
+      formatted = `${value.slice(0, 2)}:${value.slice(2, 4)}.${value.slice(4, 6)}`;
+    } else if (value.length > 2) {
+      formatted = `${value.slice(0, 2)}.${value.slice(2, 4)}`;
+    } else {
+      formatted = value;
+    }
+
+    setTime(formatted);
+  };
+
+  return (
+    <div className={`flex flex-col gap-2 ${props.css ?? ""}`}>
+        <div className="flex flex-row justify-start items-center h-8 bg-blue-400 rounded-md ml-0.5 mr-0.5">
+          <h3 className="text-center font-bold ml-0.5 mr-0.5">
+            1.
+          </h3>
+        
+            <Input
+              type="text"
+              value={name}
+              onChange={e => setName(e.target.value)}
+              placeholder="Swimmer Name"
+              style={{ height: "20px", width: "200px", background: "white", borderRadius: 0, marginRight: "4px" }}
+            />
+            <div className="flex flex-row">
+            <Input
+              type="text"
+              value={time}
+              onChange={handleTimeChange}
+              placeholder="00:00.00"
+              maxLength={9}
+              style={{ direction: "rtl", textAlign: "right", width: "85px", height: "20px", background: "white", borderRadius: 0 }}
+            />
+            </div>
+      </div>
+    </div>
+  );
+}
+
+export { Input, SwimmerInput }
