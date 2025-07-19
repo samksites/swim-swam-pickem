@@ -1,0 +1,33 @@
+{
+    "title": "Example Swim Meet",
+    "type": "scy",
+    "status": 1,
+    "entriesCloseDate": "2023-09-15",
+    "startDate": "2023-10-01",
+    "gender": "mixed",
+    "allEvents": [],
+    "seedTimes": true,
+    "days": [
+            {"title": "Day one", "events": [
+               {"name": "100m Freestyle", "swimmers": [
+                    { "name": "John Doe", "time": "00:50.00" },
+                    { "name": "Jane Smith", "time": "00:52.30" }
+                ]}
+            ]},
+            {"title": "Day one", "events": [
+               {"name": "100m Freestyle", "swimmers": [
+                    { "name": "John Doe", "time": "00:50.00" },
+                    { "name": "Jane Smith", "time": "00:52.30" }
+                ]}
+            ]},
+            {"title": "Day one", "events": [
+               {"name": "100m Freestyle", "swimmers": [
+                    { "name": "John Doe", "time": "00:50.00" },
+                    { "name": "Jane Smith", "time": "00:52.30" }
+                ]}
+            ]}
+    ]
+
+}
+
+
