@@ -12,9 +12,19 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 
-export function DatePicker({ txt = "Date of birth" }: { txt?: string }) {
+type DatePickerProps = {
+  txt?: string;
+  savedDate?: Date;
+  action?: (value: Date | string) => void;
+}
+
+export function DatePicker({ txt, savedDate }: DatePickerProps) {
   const [open, setOpen] = React.useState(false)
   const [date, setDate] = React.useState<Date | undefined>(undefined)
+
+   React.useEffect(() => {
+        setDate(savedDate);
+    }, [savedDate])
 
   return (
     <div className="flex flex-col gap-3">

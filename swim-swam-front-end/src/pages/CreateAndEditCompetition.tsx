@@ -19,7 +19,10 @@ import { IoClose } from "react-icons/io5";
 import { Combobox } from '@/components/ui/combobox';
 import { DatePicker } from '@/components/ui/datePicker';
 import { Button } from '@/components/ui/button';
-//import { ScrollArea } from '@radix-ui/react-scroll-area';
+import AllEvents from '../components/ui/allEvents';
+import { useMeetStore } from "../stores/useMeetStore";
+import { useAlertStore } from '@/stores/useAlertStore';
+import checkCompetitionForSubmit from '../lib/utils';
 
 
 /**
@@ -154,46 +157,88 @@ const CreateCompetition: React.FC = () => {
 
 // CompetitionEditorEventSettings component to handle the settings for the competition for the event editor
 const CompetitionEditorEventSettings: React.FC = () => {
+
+    type MeetStoreState = {
+        meetData: {
+            title: string; // title of the meet
+            type: string; // type can be 'scy', 'scm', or 'lcm'
+            gender: string; // gender can be 'c', 'w', or 'm'
+            startDate: string; // startDate is a string in the format 'YYYY-MM-DD'
+            entriesCloseDate: string; // entriesCloseDate is a string in the format 'YYYY-MM-DD'
+            // add other properties if needed
+        };
+        updateDistance?: (distance: string) => void;
+        updateGender?: (gender: string) => void;
+        updateTitle?: (title: string) => void;
+    }
+    const meetType: string = useMeetStore((state: MeetStoreState) => state.meetData.type);
+    const meetTitle: string = useMeetStore((state: MeetStoreState) => state.meetData.title);
+    const meetGender: string = useMeetStore((state: MeetStoreState) => state.meetData.gender);
+    const meetStartDate: string = useMeetStore((state: MeetStoreState) => state.meetData.startDate);
+    const entriesCloseDate: string = useMeetStore((state: MeetStoreState) => state.meetData.entriesCloseDate);
+    const setMeetTitle = useMeetStore((state: MeetStoreState) => state.updateTitle);
+    const setMeetDistance = useMeetStore((state: MeetStoreState) => state.updateDistance);
+    const setMeetGender = useMeetStore((state: MeetStoreState) => state.updateGender);
+    useEffect(() => {
+        
+    }, [meetType]);
     return (
+        <div className='flex flex-col justify-center items-center w-full h-full'>
+            <div className='flex flex-col justify-center items-center w-full'>
+                    <h2 className='text-2xl text-center mt-6   text-white'>
+                        Competition title   
+                    </h2>
+                    <Input onChange={(e) => setMeetTitle?.(e.target.value)} value={meetTitle} placeholder={"Enter meet title"} className=' mt-5 -mb-4 w-100 bg-white'/>
+                </div>
+                
+        
         <div className='flex flex-col sm:flex-row justify-center flex-wrap items-center w-full mt-10 mb-4'>
+                
                 <div className="mt-5 mb-30 sm:ml-4 sm:mr-4 md:ml-10 md:mr-10 lg:ml-20 lg:mr-20">
-                    <Combobox options={[
-                        { value: 'scy', label: 'Short course yards' },
-                        { value: 'scm', label: 'Short course meters' },
-                        { value: 'lcm', label: 'Long course meters' }
-                    ]} />
+                    <Combobox
+                        options={[
+                            { value: 'scy', label: 'Short course yards' },
+                            { value: 'scm', label: 'Short course meters' },
+                            { value: 'lcm', label: 'Long course meters' }
+                        ]}
+                        baseValue={meetType}
+                        action={setMeetDistance}
+                    />
                 </div>
                 <div className="mt-5 mb-30 sm:ml-4 sm:mr-4 md:ml-10 md:mr-10 lg:ml-20 lg:mr-20">
                     <Combobox options={[
                         { value: 'c', label: 'Combined' },
                         { value: 'w', label: 'Women' },
                         { value: 'm', label: 'Men' }
-                    ]} />
+                    ]} 
+                        baseValue={meetGender}
+                        action={setMeetGender}
+                        
+                    />
                 </div>
                 <div className='w-full flex flex-col sm:flex-row items-center justify-center h-auto'>
                     <div className='h-40 sm:ml-4 sm:mr-4 md:ml-10 md:mr-10 lg:ml-20 lg:mr-20'>
-                        <DatePicker txt='Competition entries start date'/>
+                        <DatePicker txt='Competition entries close date' savedDate={new Date(entriesCloseDate)}/>
                     </div>
                     
                     <div className='h-40 sm:ml-4 sm:mr-4 md:ml-10 md:mr-10 lg:ml-20 lg:mr-20'>
-                        <DatePicker  txt='Competition start date'/>
+                        <DatePicker  txt='Competition start date' savedDate={new Date(meetStartDate)}/>
                     </div>
                 </div>
-
-                <Button variant="secondary" className={"text-white w-50 bg-blue-500 cursor-pointer hover:bg-blue-600"}>
-                    Save competition
-                </Button>
             </div>
+        </div>
     );
 }
 
 
 // EditEvent component to handle individual event editing
-const EditEvent: React.FC = () => { 
+const EditEvent: React.FC<{ dayNumber: number; eventNumber: number; clickBack?: () => void }> = ({ dayNumber, eventNumber, clickBack }) => {
+
+    const event = useMeetStore((state) => state.meetData.days[dayNumber].events[eventNumber]);
 
     return(
         <div>
-            <Card title={"Mens 100m Freestyle"} type={'swimmers'} swimmers={["Sam Kettlewell-Sites"]}/>
+            <Card title={event.title} type={'swimmers'} clickEvent={clickBack} index={dayNumber} eventIndex={eventNumber} swimmers={event.swimmers.map(swimmer => swimmer.name)} />
         </div>
     );
 }
@@ -203,22 +248,63 @@ const EditEvent: React.FC = () => {
  * @returns Component to display the events for the competition editor or swimmers
  */
 
-const CompetitionEditorEvents: React.FC = () => {
+interface CompetitionEditorEventsProps {
+    handleAddEvent?: (toggle: boolean, index: number) => void;
+}
 
-    const [activeElement, setActiveElement] = React.useState<React.ReactNode>(null);
+const CompetitionEditorEvents: React.FC<CompetitionEditorEventsProps> = ({ handleAddEvent }) => {
 
-    useEffect(() => {
-        
-        setActiveElement( <>
-            <EditEvent />
-            </>)
+    const [editSwimmers, setEditSwimmers] = React.useState<React.ReactNode>(null);
+    const [displayEvents, setDisplayEvents] = React.useState<boolean>(true);
 
-    }, []);
+      type Swimmer = {
+        name: string;
+        time: string;
+        // add other swimmer properties as needed
+    };
+
+    type Event = {
+        title: string;
+        swimmers: Swimmer[];
+        // add other event properties as needed
+    };
+
+    type Day = {
+        events: Event[];
+        title: string;
+        // add other day properties as needed
+    };
+
+    type MeetStoreState = {
+        meetData: {
+            days: Day[];
+        };
+    };
+    
+
+    const editEvent = (day: number, event: number) => {
+        setEditSwimmers(<EditEvent clickBack={() => setDisplayEvents(true)} dayNumber={day} eventNumber={event} />);
+        setDisplayEvents(false);
+    };
+
+
+    let days: React.ReactNode = null;
+    // Get the meet data from the store
+    const meetDays: Day[] = useMeetStore((state: MeetStoreState) => state.meetData.days);
+    // Map through the meetDays to create a Card for each day
+    // Each Card will display the title of the day and will be clickable to edit the event
+    if(displayEvents) {
+        days = meetDays.map((day, index) => {
+
+            return (
+                <Card key={index + day.title} clickEvent={editEvent} handleAddEvent={handleAddEvent} index={index} title={day.title} type={'eventPage'} />
+            );
+        });
+    }
 
     return(
         <div className='flex flex-wrap justify-center'>
-            {<Card title={"Day one"} type={'eventPage'} />}
-            {activeElement}
+            {displayEvents ? days : editSwimmers}
         </div>
     );
 }
@@ -233,28 +319,93 @@ const CompetitionEditor: React.FC<CompetitionEditorProps> = ({ onClick }) => {
     // State to manage the active tab in the competition editor
     // It can be either the event settings, events, or edit JSON tab
     const [activeTab, setActiveTab] = React.useState<React.ReactNode>(<CompetitionEditorEventSettings />);
+    const [addEvent, setAddEvent] = React.useState<boolean>(false);
+    const [editDayIndex, setEditDayIndex] = React.useState<number>(-1);
+    
+    useEffect(() => {
+    // Load meet data (could be fetched too)
+    });
+
+    /**
+     * Handle the addition of a new event.
+     * @param toggle - Whether to show or hide the add event form.
+     */
+    const handleAddEvent = (toggle: boolean, index: number) => {
+        setAddEvent(toggle);
+        setEditDayIndex(index)
+    };
+
+    const setAlert = useAlertStore((state) => state.setAlert);
+
+    const exitAlert = {
+        show: true,
+        message: "Are you sure you want to exit before saving changes?",
+        confirmAction: () => {
+            onClick?.();
+        },
+    };
+
+    const handleBackArrowClick = () => {
+        setAddEvent(false);
+    };  
+
+    const handleSubmitCompetition = () => {
+        const meetData = useMeetStore.getState().meetData;
+
+        const submitValidation = checkCompetitionForSubmit(meetData);
+
+        if (submitValidation.valid) {
+            setAlert?.({
+                show: true,
+                message: `You are about to submit the competition. You can still make changes until ${meetData.entriesCloseDate}.`,
+                confirmAction: () => {
+                    onClick?.();
+                },
+            });
+        } else {
+            // Show an error message
+            setAlert?.({
+                show: true,
+                message: submitValidation.message,
+                confirmAction: () => {
+                    onClick?.();
+                },
+            });
+        }
+    };
 
     return (
-        <div className='relative z-2 flex flex-col items-center min-h-80 rounded-md bg-gray-800 w-9/10 h-220 sm:min-h-150 sm:h-auto mb-10'>
+        <div className='relative z-2 flex flex-col items-center min-h-80 rounded-md bg-gray-800 w-9/10 sm:min-h-150 h-auto mb-10'>
             <IoClose
                 className="absolute top-3 left-3 cursor-pointer text-blue-500 transition-transform duration-150 hover:scale-110"
                 size={32}
-                onClick={onClick}
+                onClick={() => setAlert?.(exitAlert)}
             />
             <h2 className='text-2xl text-center mt-4 mb-4 text-white'>
-                Edit competition
+                {addEvent ? "" : "Edit Competition"}
             </h2>
-            <Tabs defaultValue="eventSettings" className="w-[400px] justify-center items-center">
-                <TabsList>
-                    <TabsTrigger onClick={() => setActiveTab(<CompetitionEditorEventSettings />)}  value="eventSettings">Event settings</TabsTrigger>
-                    <TabsTrigger onClick={()=> setActiveTab(<CompetitionEditorEvents />)}  value="events">Events</TabsTrigger>
-                    <TabsTrigger  value="editJSON">Edit JSON</TabsTrigger>
-                </TabsList>
-            </Tabs>
-            {activeTab}
-            
+            {addEvent ? (
+                <AllEvents dayIndex={editDayIndex} backArrow={handleBackArrowClick} />
+            ) : <Tabs defaultValue="eventSettings" className="w-[400px] justify-center items-center">
+                    <TabsList>
+                        <TabsTrigger onClick={() => setActiveTab(<CompetitionEditorEventSettings />)}  value="eventSettings">Settings</TabsTrigger>
+                        <TabsTrigger onClick={()=> setActiveTab(<CompetitionEditorEvents handleAddEvent={handleAddEvent} />)}  value="events">Events</TabsTrigger>
+                    </TabsList>
+                </Tabs>}
+            {addEvent ? null : <>{activeTab}</>}
+            <div className="flex flex-row gap-4 mb-4">
+                <Button variant="secondary" className="text-white w-50 bg-blue-500 cursor-pointer hover:bg-blue-600">
+                    Save competition
+                </Button>
+                <div onClick={() => handleSubmitCompetition()}>
+                    <Button  variant="secondary" className="text-white w-50 bg-blue-500 cursor-pointer hover:bg-blue-600">
+                        Submit competition
+                    </Button>
+                </div>
+            </div>
         </div>
     );
 }
 
 export default CreateAndEditCompetition;
+ 

@@ -21,16 +21,25 @@ import {
 type ComboboxOption = {
   value: string;
   label: string;
+  baseValue?: string;
 };
 
 type ComboboxProps = {
   options: ComboboxOption[];
+  baseValue?: string;
+  action?: (value: string) => void;
 };
 
-export function Combobox({ options }: ComboboxProps) {
+export function Combobox({ options, baseValue, action }: ComboboxProps) {
   const [open, setOpen] = React.useState(false)
   const [value, setValue] = React.useState("")
-
+  
+  React.useEffect(() => {
+      setValue(baseValue||"");
+      if (action) {
+        action(baseValue || "");
+      }
+  }, [baseValue, action])
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
