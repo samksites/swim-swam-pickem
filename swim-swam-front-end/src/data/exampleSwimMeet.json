@@ -1,12 +1,27 @@
 {
     "id": "123456",
-    "title": "Example Swim Meet",
+    "title": "",
     "type": "scy",
     "status": 1,
     "entriesCloseDate": "2023-09-15",
-    "startDate": "2023-10-01",
-    "gender": "mixed",
-    "allEvents": ["100m Freestyle", "200m Freestyle", "100m Butterfly", "50m Butterfly", "50m Freestyle", "50m Breaststroke"],
+    "startDate": "2023-10-06",
+    "gender": "c",
+    "daysTitle": ["Day one", "Day two", "Day three"],
+    "allEvents": [
+        {"name": "100m Freestyle", "used": false},
+        {"name": "500m Freestyle", "used": true},
+        {"name": "100m Backstroke", "used": false},
+        {"name": "200m Backstroke", "used": true},
+        {"name": "100m Breaststroke", "used": false},
+        {"name": "200m Breaststroke", "used": true},
+        {"name": "200m Freestyle", "used": true},
+        {"name": "100m Butterfly", "used": false},
+        {"name": "50m Butterfly", "used": true},
+        {"name": "50m Freestyle", "used": false},
+        {"name": "50m Breaststroke", "used": true},
+        {"name": "50m Backstroke", "used": true},
+        {"name": "100m Individual Medley", "used": true}
+    ],
     "seedTimes": true,
     "days": [
             {"title": "Day one", "events": [
@@ -31,10 +46,6 @@
             ]},
             {"title": "Day three", "events": [
                {"title": "50m Freestyle", "swimmers": [
-                    { "name": "John Doe", "time": "00:50.00" },
-                    { "name": "Jane Smith", "time": "00:52.30" }
-                ]},
-                 {"title": "50m Breaststroke", "swimmers": [
                     { "name": "John Doe", "time": "00:50.00" },
                     { "name": "Jane Smith", "time": "00:52.30" }
                 ]}
