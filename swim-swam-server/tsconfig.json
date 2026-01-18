@@ -7,6 +7,16 @@
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "sourceMap": true,
+    "inlineSourceMap": false,
+    "inlineSources": false
   },
+  "exclude": [
+    "tests",
+    "node_modules",
+    ".vscode",
+    "package-lock.json",
+    "package.json"
+  ]
 }

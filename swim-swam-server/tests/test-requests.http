@@ -1,0 +1,26 @@
+### Test newComp endpoint
+
+# Test with admin user
+
+### with admin user
+GET http://localhost:3000/api/competitions/newComp/42Jklj34$342$
+Content-Type: application/json
+
+
+### Test without admin privileges
+GET http://localhost:3000/api/competitions/newComp/regular-user-456 
+Content-Type: application/json
+
+### Test edit a competition without admin privileges
+PUT http://localhost:3000/api/competitions/update
+Content-Type: application/json
+userID: regular-user-456
+{
+  "competitionId": "8",
+  "name": "Updated Competition Name",
+  "startDate": "2024-09-01T00:00:00Z",
+  "endDate": "2024-12-15T00:00:00Z",
+  "isActive": true
+}
+
+

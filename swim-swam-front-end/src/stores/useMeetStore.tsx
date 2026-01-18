@@ -32,6 +32,8 @@ type MeetData = {
   seedTimes: boolean;
   allEvents: string[];
   // add other meet properties as needed
+  
+  deleteData: Set<string>;
 };
 
 type MeetStore = {
