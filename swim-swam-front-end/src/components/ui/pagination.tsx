@@ -55,7 +55,7 @@ function PaginationLink({
       data-active={isActive}
       className={cn(
         buttonVariants({
-          variant: isActive ? "editCardInactive" : "editCardActive",
+          variant: isActive ? "default" : "secondary",
           size,
         }),
         className
