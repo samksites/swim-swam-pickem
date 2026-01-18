@@ -5,6 +5,7 @@ import meetJson from "../data/exampleSwimMeet.json";
 
 import type { MeetStore, MeetData } from "@/types/meet";
 
+
 export const useMeetStore = create<MeetStore>((set) => ({
     meetData: meetJson as MeetData, // Initialize with data from meetJson
 
