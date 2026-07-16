@@ -7,26 +7,37 @@ import { requireAdminWithUserId, extractUserId, requireAdmin } from '../middlewa
 const router = Router();
 
 
-
-// GET /api/competitions/newComp
-// Get template for creating a new competition (Admin only)
-router.get('/newComp/:userID', extractUserId('param'), requireAdmin, async (req: Request, res: Response) => {
+router.post('/createMeet', extractUserId('body'), requireAdmin, async (req: Request, res: Response) => {
     try {
-        
-        logLevels.info(`Admin user creating new competition`, { userId: req.userId });
-
-        // New competition creation by admin
-        const newCompetitionId = await competitionService.createCompetition();
-        
-        logLevels.info(`New competition created successfully`, { 
+        logLevels.info(`Admin user creating competition`, { 
             userId: req.userId, 
-            competitionId: newCompetitionId 
+            competitionData: req.body 
+        });
+
+        const competitionData: CompetitionData = req.body;
+        const competitionId = Number(
+          competitionData.comp_id ?? competitionData.id ?? competitionData.competitionId ?? '-1'
+        );
+
+        const newID : number = await competitionService.updateCompetition(
+          Number.isNaN(competitionId) ? -1 : competitionId,
+          competitionData,
+          req.userId as string
+        );
+        
+        logLevels.info(`Competition created successfully`, { 
+            userId: req.userId, 
+            competitionId: newID
         });
         
-        res.status(200).json({
+        res.status(201).json({
             success: true,
             message: 'Competition created successfully',
-            data: newCompetitionId
+            data: {
+              ...competitionData,
+              id: String(newID),
+              comp_id: String(newID)
+            }
         });
 
     } catch (error) {
@@ -44,82 +55,58 @@ router.get('/newComp/:userID', extractUserId('param'), requireAdmin, async (req:
 });
 
 // PUT /api/competitions/update
-// Update competition (Admin only)
+// Creates or updates a competition (Admin only)
 router.put('/update', extractUserId('body'), requireAdmin, async (req: Request, res: Response) => {
     try {
         // At this point, middleware has already verified:
         // 1. userId exists (available as req.userId)
         // 2. User is admin (req.isAdmin = true)
-        
+       
         logLevels.info(`Admin user updating competition`, { 
             userId: req.userId, 
-            competitionId: req.body.competitionId 
+          competitionId: req.body.comp_id ?? req.body.competitionId 
         });
 
         // User is admin, update competition
+        const competitionId = Number(req.body.comp_id ?? req.body.id ?? req.body.competitionId ?? '-1');
         const updatedCompetition = await competitionService.updateCompetition(
-            req.body.competitionId, 
-            req.body
+          Number.isNaN(competitionId) ? -1 : competitionId,
+          req.body,
+          req.userId as string
         );
         
         logLevels.info(`Competition updated successfully`, { 
             userId: req.userId, 
-            competitionId: req.body.competitionId 
+          competitionId: req.body.comp_id ?? req.body.id ?? req.body.competitionId 
         });
         
         res.status(200).json({
             success: true,
             message: 'Competition updated successfully',
-            data: updatedCompetition
+            data: {
+              ...req.body,
+              id: String(updatedCompetition),
+              comp_id: String(updatedCompetition)
+            }
         });
 
     } catch (error) {
-        logLevels.error(`Failed to update competition`, { 
+        const newOrUpdated = String(req.body.comp_id ?? req.body.id ?? req.body.competitionId) === '-1' ? 'created' : 'updated';
+        logLevels.error(`Failed to ${newOrUpdated} competition`, { 
             userId: req.userId,
-            competitionId: req.body.competitionId,
+          competitionId: req.body.comp_id ?? req.body.id ?? req.body.competitionId,
             error: error instanceof Error ? error.message : 'Unknown error'
         });
         
         res.status(500).json({
             success: false,
-            message: 'Failed to update competition',
+            message: `Failed to ${newOrUpdated} competition`,
             error: error instanceof Error ? error.message : 'Unknown error'
         });
     }
 });
 
 
-
-// PUT /api/competitions/:id
-// Update competition by ID
-router.put('/:id', async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    const updateData: Partial<CompetitionData> = req.body;
-    
-    // TODO: Implement service call to update competition
-    // const updatedCompetition = await competitionService.updateCompetition(id, updateData);
-    
-    // if (!updatedCompetition) {
-    //   return res.status(404).json({
-    //     success: false,
-    //     message: 'Competition not found'
-    //   });
-    // }
-    
-    res.status(200).json({
-      success: true,
-      message: 'Competition updated successfully',
-      data: null // updatedCompetition
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Failed to update competition',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
-});
 
 // DELETE /api/competitions/:id
 // Delete competition by ID

@@ -14,6 +14,7 @@ import { useAlertStore } from "@/stores/useAlertStore";
 const EventComponent: React.FC<Event> = (props) => {
 
     const deleteEvent = useMeetStore((state) => state.deleteDayEvent);
+    const deletion = useMeetStore((state) => state.deletion);
 
         const setAlert = useAlertStore((state) => state.setAlert);
         const alertDelete = {
@@ -21,6 +22,7 @@ const EventComponent: React.FC<Event> = (props) => {
             message: "Are you sure you want to delete this event? This action cannot be undone.",
             confirmAction: () => {
                 deleteEvent(props.dayNumber ?? 0, props.index ?? 0, props.title);
+                deletion("event", props.id ?? "-1");
             },
         };
 

@@ -21,9 +21,44 @@ import { DatePicker } from '@/components/ui/datePicker';
 import { Button } from '@/components/ui/button';
 import AllEvents from '../components/ui/allEvents';
 import { useMeetStore } from "../stores/useMeetStore";
+import type { CreateCompetitionProps } from "../types/components";
 import { useAlertStore } from '@/stores/useAlertStore';
-import checkCompetitionForSubmit from '../lib/utils';
+import checkCompetitionForSubmit, { convertMeetData } from '../lib/utils';
+import type { MeetData } from '@/types/meet';
+import meetJson from "../data/templateMeet.json";
+import { meetApi } from '@/services/meetApi';
 
+const ADMIN_USER_ID = (import.meta.env.VITE_ADMIN_USER_ID as string | undefined)?.trim() ?? "";
+
+const oneYearFromNowIsoDate = (): string => {
+    const date = new Date();
+    date.setFullYear(date.getFullYear() + 1);
+    return date.toISOString().slice(0, 10);
+};
+
+const getValidDateOrDefault = (value: string | undefined): string => {
+    const candidate = String(value ?? '').trim();
+    if (!candidate) {
+        return oneYearFromNowIsoDate();
+    }
+
+    const parsed = new Date(candidate);
+    if (Number.isNaN(parsed.getTime())) {
+        return oneYearFromNowIsoDate();
+    }
+
+    return candidate;
+};
+
+const parseOptionalDate = (value: string): Date | undefined => {
+    const candidate = String(value ?? '').trim();
+    if (!candidate) {
+        return undefined;
+    }
+
+    const parsed = new Date(candidate);
+    return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+};
 
 /**
  * Component to create and edit competitions
@@ -44,7 +79,7 @@ const CreateAndEditCompetition: React.FC = () => {
     if(activeTab === 0) {
         content = <ViewCompetitions />;
     } else{
-        content = <CreateCompetition />;
+        content = <CreateCompetition  id ={"-1"}/>;
     }
 
     return (
@@ -127,23 +162,32 @@ const ViewCompetitions: React.FC = () => {
  * This component is used to create a new competition.
  * @returns Component to create a new competition
  */
-const CreateCompetition: React.FC = () => {
+
+
+const CreateCompetition: React.FC<CreateCompetitionProps> = () => {
+
+     type MeetStoreState = {
+        setMeetData: (data: MeetData) => void;
+    }
+
     
     const [competition, setCompetition] = React.useState<React.ReactNode>(null);
     const [isBlurred, setIsBlurred] = React.useState<boolean>(false);
+    const setMeet = useMeetStore((state: MeetStoreState) => state.setMeetData);
 
-        const handleClose = () => {
+
+    const handleClose = () => {
         setCompetition(null);
         setIsBlurred(false);
     };
-
     return (
         <div className='flex flex-col justify-center items-center w-full h-full'>
             {competition === null ? (
                 <PlusButton
                     onClick={() => {
-                        setCompetition(<CompetitionEditor onClick={handleClose} />);
+                        setCompetition(<CompetitionEditor  onClick={handleClose} />);
                         setIsBlurred(true);
+                        setMeet(convertMeetData(meetJson))
                     }}
                     txt={"Create new competition"}
                 />
@@ -170,6 +214,8 @@ const CompetitionEditorEventSettings: React.FC = () => {
         updateDistance?: (distance: string) => void;
         updateGender?: (gender: string) => void;
         updateTitle?: (title: string) => void;
+        updateEntriesCloseDate?: (date: string) => void;
+        updateStartDate?: (date: string) => void;
     }
     const meetType: string = useMeetStore((state: MeetStoreState) => state.meetData.type);
     const meetTitle: string = useMeetStore((state: MeetStoreState) => state.meetData.title);
@@ -179,6 +225,9 @@ const CompetitionEditorEventSettings: React.FC = () => {
     const setMeetTitle = useMeetStore((state: MeetStoreState) => state.updateTitle);
     const setMeetDistance = useMeetStore((state: MeetStoreState) => state.updateDistance);
     const setMeetGender = useMeetStore((state: MeetStoreState) => state.updateGender);
+    const setEntriesCloseDate = useMeetStore((state: MeetStoreState) => state.updateEntriesCloseDate);
+    const setStartDate = useMeetStore((state: MeetStoreState) => state.updateStartDate);
+
     useEffect(() => {
         
     }, [meetType]);
@@ -218,11 +267,11 @@ const CompetitionEditorEventSettings: React.FC = () => {
                 </div>
                 <div className='w-full flex flex-col sm:flex-row items-center justify-center h-auto'>
                     <div className='h-40 sm:ml-4 sm:mr-4 md:ml-10 md:mr-10 lg:ml-20 lg:mr-20'>
-                        <DatePicker txt='Competition entries close date' savedDate={new Date(entriesCloseDate)}/>
+                        <DatePicker txt='Competition entries close date' savedDate={parseOptionalDate(entriesCloseDate)} action={setEntriesCloseDate}/>
                     </div>
                     
                     <div className='h-40 sm:ml-4 sm:mr-4 md:ml-10 md:mr-10 lg:ml-20 lg:mr-20'>
-                        <DatePicker  txt='Competition start date' savedDate={new Date(meetStartDate)}/>
+                        <DatePicker  txt='Competition start date' savedDate={parseOptionalDate(meetStartDate)} action={setStartDate}/>
                     </div>
                 </div>
             </div>
@@ -233,6 +282,7 @@ const CompetitionEditorEventSettings: React.FC = () => {
 
 // EditEvent component to handle individual event editing
 const EditEvent: React.FC<{ dayNumber: number; eventNumber: number; clickBack?: () => void }> = ({ dayNumber, eventNumber, clickBack }) => {
+
 
     const event = useMeetStore((state) => state.meetData.days[dayNumber].events[eventNumber]);
 
@@ -250,9 +300,11 @@ const EditEvent: React.FC<{ dayNumber: number; eventNumber: number; clickBack?: 
 
 interface CompetitionEditorEventsProps {
     handleAddEvent?: (toggle: boolean, index: number) => void;
+    backArrow:() => void;
+    hideButtons: () => void;
 }
 
-const CompetitionEditorEvents: React.FC<CompetitionEditorEventsProps> = ({ handleAddEvent }) => {
+const CompetitionEditorEvents: React.FC<CompetitionEditorEventsProps> = ({ handleAddEvent, backArrow, hideButtons }) => {
 
     const [editSwimmers, setEditSwimmers] = React.useState<React.ReactNode>(null);
     const [displayEvents, setDisplayEvents] = React.useState<boolean>(true);
@@ -264,12 +316,14 @@ const CompetitionEditorEvents: React.FC<CompetitionEditorEventsProps> = ({ handl
     };
 
     type Event = {
+        id: string;
         title: string;
         swimmers: Swimmer[];
         // add other event properties as needed
     };
 
     type Day = {
+        id: string;
         events: Event[];
         title: string;
         // add other day properties as needed
@@ -283,8 +337,9 @@ const CompetitionEditorEvents: React.FC<CompetitionEditorEventsProps> = ({ handl
     
 
     const editEvent = (day: number, event: number) => {
-        setEditSwimmers(<EditEvent clickBack={() => setDisplayEvents(true)} dayNumber={day} eventNumber={event} />);
+        setEditSwimmers(<EditEvent  clickBack={() =>{backArrow(); setDisplayEvents(true)}} dayNumber={day} eventNumber={event} />);
         setDisplayEvents(false);
+        hideButtons();
     };
 
 
@@ -297,7 +352,7 @@ const CompetitionEditorEvents: React.FC<CompetitionEditorEventsProps> = ({ handl
         days = meetDays.map((day, index) => {
 
             return (
-                <Card key={index + day.title} clickEvent={editEvent} handleAddEvent={handleAddEvent} index={index} title={day.title} type={'eventPage'} />
+                <Card key={index + day.title} clickEvent={editEvent} handleAddEvent={handleAddEvent} index={index} title={day.title} type={'eventPage'} id={day.id} />
             );
         });
     }
@@ -311,28 +366,75 @@ const CompetitionEditorEvents: React.FC<CompetitionEditorEventsProps> = ({ handl
 
 
 interface CompetitionEditorProps {
+    new?: boolean;
     onClick?: () => void;
 }
 
-const CompetitionEditor: React.FC<CompetitionEditorProps> = ({ onClick }) => {
+const CompetitionEditor: React.FC<CompetitionEditorProps> = ({onClick }) => {
+
+    type MeetStoreState = {
+        addDay: () => void;
+    }
 
     // State to manage the active tab in the competition editor
     // It can be either the event settings, events, or edit JSON tab
     const [activeTab, setActiveTab] = React.useState<React.ReactNode>(<CompetitionEditorEventSettings />);
     const [addEvent, setAddEvent] = React.useState<boolean>(false);
+    const [showButtons, setShowButtons] = React.useState<boolean>(false);
+    const [whichTab, setWhichTab] = React.useState<string>("eventSettings");
     const [editDayIndex, setEditDayIndex] = React.useState<number>(-1);
     
-    useEffect(() => {
-    // Load meet data (could be fetched too)
-    });
+
+    const addDay = useMeetStore((state: MeetStoreState) => state.addDay);
+
+
+    const meetData = useMeetStore((state) => state.meetData);
+
+    const saveMeet = async () => {
+        try {
+            if (!ADMIN_USER_ID) {
+                throw new Error('Missing VITE_ADMIN_USER_ID. Set it in swim-swam-front-end/.env.local');
+            }
+
+            const meetDataToSave: MeetData = {
+                ...meetData,
+                entriesCloseDate: getValidDateOrDefault(meetData.entriesCloseDate),
+                startDate: getValidDateOrDefault(meetData.startDate),
+            };
+
+            if (meetData.id === "-1") {
+                const savedMeet = await meetApi.createMeet(meetDataToSave, ADMIN_USER_ID);
+                useMeetStore.getState().setMeetData(savedMeet);
+            } else {
+                const updatedMeet = await meetApi.updateMeet(meetDataToSave, ADMIN_USER_ID);
+                useMeetStore.getState().setMeetData(updatedMeet);
+            }
+            setAlert?.({
+                show: true,
+                message: "Competition saved successfully.",
+                confirmAction: () => {},
+            });
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : "Unknown save error";
+            console.error("Error saving meet:", errorMessage);
+            setAlert?.({
+                show: true,
+                message: `Failed to save competition: ${errorMessage}`,
+                confirmAction: () => {},
+            });
+        }
+    };
 
     /**
      * Handle the addition of a new event.
      * @param toggle - Whether to show or hide the add event form.
      */
     const handleAddEvent = (toggle: boolean, index: number) => {
+        setShowButtons(true);
         setAddEvent(toggle);
+        if(index !== -1){
         setEditDayIndex(index)
+        }
     };
 
     const setAlert = useAlertStore((state) => state.setAlert);
@@ -347,6 +449,7 @@ const CompetitionEditor: React.FC<CompetitionEditorProps> = ({ onClick }) => {
 
     const handleBackArrowClick = () => {
         setAddEvent(false);
+        setShowButtons(false);
     };  
 
     const handleSubmitCompetition = () => {
@@ -374,6 +477,7 @@ const CompetitionEditor: React.FC<CompetitionEditorProps> = ({ onClick }) => {
         }
     };
 
+
     return (
         <div className='relative z-2 flex flex-col items-center min-h-80 rounded-md bg-gray-800 w-9/10 sm:min-h-150 h-auto mb-10'>
             <IoClose
@@ -385,25 +489,39 @@ const CompetitionEditor: React.FC<CompetitionEditorProps> = ({ onClick }) => {
                 {addEvent ? "" : "Edit Competition"}
             </h2>
             {addEvent ? (
-                <AllEvents dayIndex={editDayIndex} backArrow={handleBackArrowClick} />
-            ) : <Tabs defaultValue="eventSettings" className="w-[400px] justify-center items-center">
-                    <TabsList>
-                        <TabsTrigger onClick={() => setActiveTab(<CompetitionEditorEventSettings />)}  value="eventSettings">Settings</TabsTrigger>
-                        <TabsTrigger onClick={()=> setActiveTab(<CompetitionEditorEvents handleAddEvent={handleAddEvent} />)}  value="events">Events</TabsTrigger>
-                    </TabsList>
+                <AllEvents dayIndex={editDayIndex} backArrow={handleBackArrowClick}/>
+            ) : <Tabs defaultValue={whichTab} className="w-[400px] justify-center items-center">
+                    {showButtons  ? null : (
+                        <TabsList>
+                            <TabsTrigger onClick={() => {setActiveTab(<CompetitionEditorEventSettings />); setWhichTab("eventSettings");}}  value="eventSettings">Settings</TabsTrigger>
+                            <TabsTrigger onClick={()=> {setActiveTab(<CompetitionEditorEvents hideButtons ={() => setShowButtons(true)} backArrow={handleBackArrowClick} handleAddEvent={handleAddEvent} />); setWhichTab("events");}}  value="events">Events</TabsTrigger>
+                        </TabsList>
+                    )}  
                 </Tabs>}
             {addEvent ? null : <>{activeTab}</>}
-            <div className="flex flex-row gap-4 mb-4">
-                <Button variant="secondary" className="text-white w-50 bg-blue-500 cursor-pointer hover:bg-blue-600">
-                    Save competition
-                </Button>
-                <div onClick={() => handleSubmitCompetition()}>
+            {showButtons  ? null : (
+            <div className='flex flex-col justify-center items-center'> 
+                {whichTab === 'events' ? (
+                <div className='mb-6 mt-4' onClick={() => addDay()}>
                     <Button  variant="secondary" className="text-white w-50 bg-blue-500 cursor-pointer hover:bg-blue-600">
-                        Submit competition
+                        Add Day
                     </Button>
                 </div>
+                ) : null }
+                <div className="flex flex-row gap-4 mb-4">
+                    <Button variant="secondary" className="text-white w-50 bg-blue-500 cursor-pointer hover:bg-blue-600" onClick={saveMeet}>
+                        Save competition
+                    </Button>
+                    <div onClick={() => handleSubmitCompetition()}>
+                        <Button  variant="secondary" className="text-white w-50 bg-blue-500 cursor-pointer hover:bg-blue-600">
+                            Submit competition
+                        </Button>
+                    </div>
+                </div>
             </div>
+            )}
         </div>
+            
     );
 }
 

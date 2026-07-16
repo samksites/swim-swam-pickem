@@ -11,6 +11,7 @@ import config from '../config/config.json';
 // import dotenv to load environment variables
 import 'dotenv/config';
 import { text } from 'stream/consumers';
+import { logLevels } from './logger';
 
 // database configuration
 const db = config.database;
@@ -28,10 +29,11 @@ const pool = new Pool({
 
 
 export async function query(text: string, params?: any[]) {
+  logLevels.info(`Executing query`, { text, params });
   const start = Date.now();
   const res = await pool.query(text, params);
   const duration = Date.now() - start;
-  console.log('Executed query', { text, duration, rows: res.rowCount });
+  logLevels.info(`Query executed`, { text, duration, rows: res.rowCount });
   return res;
 }
 
@@ -78,6 +80,8 @@ export async function transactionQuery(client: any, sql: string, params?: any[])
   }
 }
 
+
+
 export async function commit(client: any) {
   await client.query('COMMIT');
 }
@@ -85,5 +89,6 @@ export async function commit(client: any) {
 export async function rollback(client: any) {
   await client.query('ROLLBACK');
 }
+
 
 

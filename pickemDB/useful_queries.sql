@@ -122,3 +122,6 @@ FROM Events e
 JOIN Swimmers s ON e.event_id = s.event_id
 WHERE e.event_id = 1
 ORDER BY s.place_finish;
+
+
+

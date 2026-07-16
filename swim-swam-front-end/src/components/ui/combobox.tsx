@@ -33,7 +33,6 @@ type ComboboxProps = {
 export function Combobox({ options, baseValue, action }: ComboboxProps) {
   const [open, setOpen] = React.useState(false)
   const [value, setValue] = React.useState("")
-  
   React.useEffect(() => {
       setValue(baseValue||"");
       if (action) {
@@ -67,6 +66,9 @@ export function Combobox({ options, baseValue, action }: ComboboxProps) {
                   onSelect={(currentValue) => {
                     setValue(currentValue === value ? "" : currentValue)
                     setOpen(false)
+                    if (action) {
+                      action(value === undefined ? "" : currentValue);
+                    }
                   }}
                 >
                   {option.label}

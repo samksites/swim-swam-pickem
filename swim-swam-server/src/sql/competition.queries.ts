@@ -6,67 +6,66 @@ export const queryCompetitionInfoUsers = {
   // Get all competitions
   getAllCompetitions: `
     SELECT 
-      id,
+      comp_id,
       title,
-      type,
+      created_on,
+      entries_open,
       status,
-      entries_close_date,
-      start_date,
+      starts_on,
       gender,
-      all_events,
-      seed_times,
-      created_at,
-      updated_at
-    FROM competitions
-    ORDER BY start_date DESC
+      meet_type
+    FROM Competitions
+    ORDER BY starts_on DESC
   `,
   // Get competition by ID
   getCompetitionById: `
     SELECT 
-      id,
+      comp_id,
       title,
-      type,
+      created_on,
+      entries_open,
       status,
-      entries_close_date,
-      start_date,
+      starts_on,
       gender,
-      all_events,
-      seed_times,
-      created_at,
-      updated_at
-    FROM competitions
-    WHERE id = $1
+      meet_type
+    FROM Competitions
+    WHERE comp_id = $1
   `,
 
-   // Get active competitions (status = 1)
+   // Get active competitions
   getActiveCompetitions: `
     SELECT 
-      id,
+      comp_id,
       title,
-      type,
-      entries_close_date,
-      start_date,
-      gender
-    FROM competitions
-    WHERE status = 1
-    AND start_date >= CURRENT_DATE
-    ORDER BY start_date ASC
+      created_on,
+      entries_open,
+      status,
+      starts_on,
+      gender,
+      meet_type
+    FROM Competitions
+    WHERE status IN ('upcoming', 'current')
+      AND starts_on >= CURRENT_DATE
+    ORDER BY starts_on ASC
   `,
 
   // Get competitions by status
   getCompetitionsByStatus: `
     SELECT 
-      id,
+      comp_id,
       title,
-      type,
+      created_on,
+      entries_open,
       status,
-      entries_close_date,
-      start_date,
-      gender
-    FROM competitions
+      starts_on,
+      gender,
+      meet_type
+    FROM Competitions
     WHERE status = $1
-    ORDER BY start_date DESC
+    ORDER BY starts_on DESC
   `,
+
+  
 
 }
 
@@ -75,103 +74,102 @@ export const queryCompetitionInternalLogic = {
   getCompetitionDayAndEventIds: `
     SELECT d.day_id AS competition_day_id, e.event_id AS competition_event_id
   FROM Competitions c
-  JOIN CompetitionDays d ON c.id = d.comp_id
-  JOIN CompetitionEvents e ON d.day_id = e.day_comp_id
-  WHERE c.id = $1
+  JOIN CompetitionDays d ON c.comp_id = d.comp_id
+  JOIN CompetitionEvent e ON d.day_id = e.day_id
+  WHERE c.comp_id = $1
   `,
 }
 
 export const competitionQueries = {
 
-  // Create new competition
-  createCompetition: `
-    INSERT INTO Competitions (event_name)
-    VALUES ('')
+  // Upsert competition (insert or update on conflict)
+  upsertCompetition: `
+    INSERT INTO Competitions (comp_id, title, entries_open, status, starts_on, gender, meet_type)
+    VALUES ($1, $2, $3, $4, $5, $6, $7)
+    ON CONFLICT (comp_id) DO UPDATE SET
+      title = EXCLUDED.title,
+      entries_open = EXCLUDED.entries_open,
+      status = EXCLUDED.status,
+      starts_on = EXCLUDED.starts_on,
+      gender = EXCLUDED.gender,
+      meet_type = EXCLUDED.meet_type
     RETURNING comp_id;
   `,
-
-  // Update competition
-  updateCompetition: `
-    UPDATE competitions
-    SET 
-      title = COALESCE($2, title),
-      type = COALESCE($3, type),
-      status = COALESCE($4, status),
-      entries_close_date = COALESCE($5, entries_close_date),
-      start_date = COALESCE($6, start_date),
-      gender = COALESCE($7, gender),
-      all_events = COALESCE($8, all_events),
-      seed_times = COALESCE($9, seed_times),
-      updated_at = CURRENT_TIMESTAMP
-    WHERE id = $1
-    RETURNING *
+  insertCompetitionDay: `
+    INSERT INTO CompetitionDays (day_id, comp_id, day_title, day_order)
+    VALUES ($1, $2, $3, $4);
   `,
-  
-  // UPSERT competition days - Insert if not exists, Update if exists
-  batchUpsertAndPruneCompetitionDays: `
-    WITH incoming AS (
-      SELECT $1::text AS comp_id, u.day_order, u.day_name
-      FROM unnest($2::int[], $3::text[]) AS u(day_order, day_name)
-    ),
-    upserted AS (
-      INSERT INTO CompetitionDays (comp_id, day_order, day_name)
-      SELECT comp_id, day_order, day_name
-      FROM incoming
-      ON CONFLICT (comp_id, day_name)
-      DO UPDATE SET
-        day_order = EXCLUDED.day_order
-      RETURNING
-        day_id, comp_id, day_order, day_name,
-        CASE WHEN xmax = 0 THEN 'inserted' ELSE 'updated' END AS operation
-    ),
-    pruned AS (
-      DELETE FROM CompetitionDays cd
-      WHERE cd.comp_id = $1
-        AND cd.day_name NOT IN (SELECT day_name FROM incoming)
-      RETURNING day_id, comp_id, day_order, day_name, 'deleted' AS operation
-    )
-    SELECT * FROM upserted
-    UNION ALL
-    SELECT * FROM pruned
-    ORDER BY comp_id, day_order NULLS LAST, day_name;
+  upsertCompetitionDay: `
+    INSERT INTO CompetitionDays (day_id, comp_id, day_title, day_order)
+    VALUES ($1, $2, $3, $4)
+    ON CONFLICT (day_id) DO UPDATE SET
+      comp_id = EXCLUDED.comp_id,
+      day_title = EXCLUDED.day_title,
+      day_order = EXCLUDED.day_order;
   `,
-
-  // Delete old competition days not in the provided list
-  deleteOldCompetitionDays: `
-    DELETE FROM CompetitionDays
-    WHERE comp_id = $1
-    AND day_name NOT IN (SELECT UNNEST(ARRAY[$2::text[]]))
+  insertCompetitionEvent: `
+    INSERT INTO CompetitionEvent (event_id, day_id, event_title, event_order)
+    VALUES ($1, $2, $3, $4);
   `,
-
-  // Update existing competition days only (legacy - consider using upsert above)
-  upsertSwimmer: `
-    INSERT INTO Swimmers (swimmer_id, event_id, swimmer_name, place_finish, swimmer_time)
+  upsertCompetitionEvent: `
+    INSERT INTO CompetitionEvent (event_id, day_id, event_title, event_order)
+    VALUES ($1, $2, $3, $4)
+    ON CONFLICT (event_id) DO UPDATE SET
+      day_id = EXCLUDED.day_id,
+      event_title = EXCLUDED.event_title,
+      event_order = EXCLUDED.event_order;
+  `,
+  insertSwimmerEntry: `
+    INSERT INTO Swimmers (swimmer_id, event_id, swimmer_name, swimmer_time, place_finish)
+    VALUES ($1, $2, $3, $4, $5);
+  `,
+  upsertSwimmerEntry: `
+    INSERT INTO Swimmers (swimmer_id, event_id, swimmer_name, swimmer_time, place_finish)
     VALUES ($1, $2, $3, $4, $5)
-    ON CONFLICT (swimmer_id)
-    DO UPDATE SET
-      event_id = COALESCE(EXCLUDED.event_id, Swimmers.event_id),
-      swimmer_name = COALESCE(EXCLUDED.swimmer_name, Swimmers.swimmer_name),
-      place_finish = COALESCE(EXCLUDED.place_finish, Swimmers.place_finish),
-      swimmer_time = COALESCE(EXCLUDED.swimmer_time, Swimmers.swimmer_time),
-      -- no updated_at in schema; add if needed
-    RETURNING swimmer_id, event_id, swimmer_name, place_finish, swimmer_time, 'upsertSwimmer' AS operation
+    ON CONFLICT (swimmer_id) DO UPDATE SET
+      event_id = EXCLUDED.event_id,
+      swimmer_name = EXCLUDED.swimmer_name,
+      swimmer_time = EXCLUDED.swimmer_time,
+      place_finish = EXCLUDED.place_finish;
   `,
 
-  // Delete competition
-  deleteCompetition: `
-    DELETE FROM competitions
-    WHERE id = $1
-    RETURNING id
+  deleteMissingSwimmersForCompetition: `
+    DELETE FROM Swimmers s
+    USING CompetitionEvent e, CompetitionDays d
+    WHERE s.event_id = e.event_id
+      AND e.day_id = d.day_id
+      AND d.comp_id = $1
+      AND NOT (s.swimmer_id = ANY($2::int[]));
   `,
 
-  // Update competition status
-  updateCompetitionStatus: `
-    UPDATE competitions
-    SET 
-      status = $2,
-      updated_at = CURRENT_TIMESTAMP
-    WHERE id = $1
-    RETURNING *
+  deleteMissingEventsForCompetition: `
+    DELETE FROM CompetitionEvent e
+    USING CompetitionDays d
+    WHERE e.day_id = d.day_id
+      AND d.comp_id = $1
+      AND NOT (e.event_id = ANY($2::int[]));
   `,
+
+  deleteMissingDaysForCompetition: `
+    DELETE FROM CompetitionDays d
+    WHERE d.comp_id = $1
+      AND NOT (d.day_id = ANY($2::int[]));
+  `,
+
+  getCompetitionMaxID: `
+    SELECT MAX(comp_id) + 1 AS max_id FROM Competitions;
+  `,
+
+  getCompetitionDaysMaxID: `
+    SELECT MAX(day_id) AS max_id FROM CompetitionDays;
+  `,
+
+  getCompetitionEventsMaxID: `
+    SELECT MAX(event_id) AS max_id FROM CompetitionEvent;
+  `,
+  getMaxSwimmerID: `
+    SELECT MAX(swimmer_id) AS max_id FROM Swimmers;
+  `,
+
 };
 

@@ -1,4 +1,5 @@
 import express from 'express';
+import cors from 'cors';
 import morganMiddleware from './middleware/morganMiddleware';
 import logger from './services/logger';
 import competitionRoutes from './routes/competition.routes';
@@ -10,6 +11,16 @@ const app = express();
 // It logs HTTP requests in a format that includes method, URL, status, response time, etc.
 // Ensure that the logger is set up before using it
 app.use(express.json());
+app.use(
+  cors({
+    origin: [
+      'http://localhost:5173',
+      'http://127.0.0.1:5173',
+    ],
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    credentials: false,
+  })
+);
 app.use(morganMiddleware); // Morgan logs into Winston
 
 // Mount routes

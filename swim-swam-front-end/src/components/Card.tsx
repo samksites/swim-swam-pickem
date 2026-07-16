@@ -90,7 +90,7 @@ const EventCompetitionCard: React.FC<EventCompetitionCardProps> = (props) => {
 
     if(dayEvents.length > 0){
         events = dayEvents.map((event, index) => (
-            <EventComponent clickEvent={props.clickEvent} swimmers={event.swimmers} swimmerCount={event.swimmers.length} moveEvent={moveEvent} numberOfEvents={dayEvents.length} dayNumber={props.index ?? 0} index={index} key={index + event.title} title={event.title} />
+            <EventComponent clickEvent={props.clickEvent} swimmers={event.swimmers} swimmerCount={event.swimmers.length} moveEvent={moveEvent} numberOfEvents={dayEvents.length} dayNumber={props.index ?? 0} index={index} key={index + event.title} title={event.title} id={event.id} />
         ));
     }
 
@@ -131,7 +131,7 @@ const SwimmersCard: React.FC<SwimmersCardProps> = ({ dayIndex, eventIndex }) => 
     const orderSwimmers = useMeetStore((state) => state.sortSwimmersByTime);
 
     const swimmerInputs = swimmersList.map((swimmer, index) => (
-        <SwimmerInput key={swimmer + String(index)} index={index} dayIndex={dayIndex} eventIndex={eventIndex} name={swimmer.name} css={'mb-2 mt-2 ml-2 w-75'} />
+        <SwimmerInput swimmerId={swimmer.id} key={swimmer.id + index} index={index} dayIndex={dayIndex} eventIndex={eventIndex} name={swimmer.name} css={'mb-2 mt-2 ml-2 w-75'} />
     ));
 
     return(
@@ -171,15 +171,21 @@ const Card: React.FC<CardProps> = (props) => {
 
 
     const updateDayTitle = useMeetStore((state) => state.updateDayTitle);
-    const dayTitle: string = useMeetStore((state) => state.meetData.daysTitle[props.index || 0]);
+    let dayTitle: string = '';
+    if(props.type === 'eventPage'){
+        // eslint-disable-next-line react-hooks/rules-of-hooks
+        dayTitle = useMeetStore((state) => state.meetData.daysTitle[props.index || 0]);
+    }
     let inputCardTitle: React.ReactNode = props.title;
     const deleteDay = useMeetStore((state) => state.deleteDay);
+    const deletion = useMeetStore((state) => state.deletion);
     const setAlert = useAlertStore((state) => state.setAlert);
     const alertDelete = {
         show: true,
         message: "Are you sure you want to delete this day? This action cannot be undone.",
         confirmAction: () => {
             deleteDay(props.index || 0);
+            deletion("day", props.id ?? "-1");
         },
     };
 
