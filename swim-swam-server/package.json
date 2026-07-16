@@ -7,6 +7,7 @@
     "build": "tsc",
     "dev": "npx ts-node src/index.ts",
     "dev:watch": "nodemon src/index.ts",
+    "db:competition-tables": "bash ./scripts/run-competition-tables.sh",
     "debug": "node --inspect-brk=9229 -r ts-node/register src/index.ts",
     "debug:nodemon": "nodemon --inspect=9229 src/index.ts"
   },
@@ -15,6 +16,8 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@types/cors": "^2.8.19",
+    "cors": "^2.8.6",
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
     "morgan": "^1.10.0",

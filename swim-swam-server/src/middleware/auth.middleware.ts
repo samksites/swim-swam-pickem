@@ -19,21 +19,18 @@ declare global {
 export const extractUserId = (source: 'header' | 'param' | 'body' = 'header') => {
   return (req: Request, res: Response, next: NextFunction): void => {
     let userId: string | undefined;
-
     // Extract userId based on source
     switch (source) {
       case 'header':
-        userId = req.headers['userID'] as string;
+        userId = req.headers['userId'] as string;
         break;
       case 'param':
-        userId = req.params['userID'] || req.params.userId;
+        userId = req.params['userId'] || req.params.userId;
         break;
       case 'body':
-        userId = req.body.userID;
+        userId = req.body.userId;
         break;
     }
-
-    logLevels.debug(`Extracting userId from ${source}`, { userId, endpoint: req.path });
 
     if (!userId) {
       logLevels.warn(`Missing user ID in ${source}`, { 

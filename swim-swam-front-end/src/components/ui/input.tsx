@@ -21,6 +21,7 @@ function Input({ className, type, ...props }: React.ComponentProps<"input">) {
 }
 
 type SwimmerInputProps = {
+    swimmerId: string;
     index: number;
     name: string;
     dayIndex?: number;
@@ -35,6 +36,7 @@ const SwimmerInput: React.FC<SwimmerInputProps> = (props) => {
   const updateSwimmerTime = useMeetStore((state) => state.updateSwimmerTime);
   const updateSwimmerName = useMeetStore((state) => state.updateSwimmerName);
   const deleteSwimmer = useMeetStore((state) => state.deleteSwimmer);
+  const deletion = useMeetStore((state) => state.deletion);
 
 
   // Format time as user types: mm:ss.hh
@@ -95,7 +97,7 @@ const SwimmerInput: React.FC<SwimmerInputProps> = (props) => {
             <IoTrashOutline
               className="black hover:scale-110 hover:cursor-pointer mr-1"
               size={20}
-              onClick={() => deleteSwimmer(props.dayIndex ?? 0, props.eventIndex ?? 0, props.index)}
+              onClick={() => {deleteSwimmer(props.dayIndex ?? 0, props.eventIndex ?? 0, props.index); deletion("swimmer", props.swimmerId)}}
             />
       </div>
     </div>

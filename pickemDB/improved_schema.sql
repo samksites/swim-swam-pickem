@@ -25,9 +25,9 @@ CREATE TABLE swimSwam_user (
 -- Competitions table (main competition info)
 CREATE TABLE Competitions (
     comp_id SERIAL PRIMARY KEY,
-    event_name VARCHAR(100) NOT NULL,
+    title VARCHAR(100) NOT NULL,
     created_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    events_open TIMESTAMP NOT NULL, -- When events open for picks
+    entries_open TIMESTAMP NOT NULL, -- When events open for picks
     status VARCHAR(20) DEFAULT 'upcoming' CHECK (status IN ('upcoming', 'current', 'completed')),
     starts_on TIMESTAMP NOT NULL,
     gender CHAR(1) CHECK (gender IN ('M', 'W', 'B')),
@@ -38,29 +38,31 @@ CREATE TABLE Competitions (
 CREATE TABLE CompetitionDays (
     day_id SERIAL PRIMARY KEY,
     comp_id INT NOT NULL,
-    day_name VARCHAR(50) NOT NULL, -- e.g., "Day 1", "Preliminaries", "Finals"
+    day_title VARCHAR(50) NOT NULL, -- e.g., "Day 1", "Preliminaries", "Finals"
+    day_order INT NOT NULL,
     FOREIGN KEY (comp_id) REFERENCES Competitions(comp_id) ON DELETE CASCADE,
-    UNIQUE(comp_id, day_name)
+    UNIQUE(comp_id, day_title)
 );
 
 -- Events table (each day has multiple events)
 CREATE TABLE CompetitionEvent (
     event_id SERIAL PRIMARY KEY,
     day_id INT NOT NULL,
-    event_name VARCHAR(100) NOT NULL, -- e.g., "Men's 100m Freestyle", "Women's 200m Butterfly"
+    event_title VARCHAR(100) NOT NULL, -- e.g., "Men's 100m Freestyle", "Women's 200m Butterfly"
+    event_order INT NOT NULL,
     FOREIGN KEY (day_id) REFERENCES CompetitionDays(day_id) ON DELETE CASCADE,
-    UNIQUE(event_id, event_name)
+    UNIQUE(event_id, event_title)
 );
 
 -- swimmers
 CREATE TABLE Swimmers (
-    swimmerId SERIAL PRIMARY KEY,
+    swimmer_id SERIAL PRIMARY KEY,
     event_id INT NOT NULL,
     swimmer_name VARCHAR(100) NOT NULL,
     swimmer_time VARCHAR(20),
     place_finish INT NOT NULL,
     FOREIGN KEY (event_id) REFERENCES CompetitionEvent(event_id) ON DELETE CASCADE,
-    UNIQUE(swimmerId, swimmer_name) -- Each place can only have one swimmer per event
+    UNIQUE(swimmer_id, swimmer_name) -- Each place can only have one swimmer per event
 );
 
 -- User Competitions (which competitions users are participating in)
@@ -91,7 +93,7 @@ CREATE TABLE Picks (
 
 -- Indexes for better performance
 CREATE INDEX idx_competitions_starts_on ON Competitions(starts_on);
-CREATE INDEX idx_competitions_events_open ON Competitions(events_open);
+CREATE INDEX idx_competitions_entries_open ON Competitions(entries_open);
 CREATE INDEX idx_competition_days_comp_id ON CompetitionDays(comp_id);
 CREATE INDEX idx_competition_event_day_id ON CompetitionEvent(day_id);
 CREATE INDEX idx_swimmers_event_id ON Swimmers(event_id);
@@ -104,9 +106,9 @@ CREATE INDEX idx_picks_event_id ON Picks(event_id);
 CREATE VIEW CompetitionOverview AS
 SELECT 
     c.comp_id,
-    c.event_name,
+    c.title,
     c.starts_on,
-    c.events_open,
+    c.entries_open,
     c.meet_type,
     COUNT(DISTINCT cd.day_id) as total_days,
     COUNT(DISTINCT e.event_id) as total_events,
@@ -115,27 +117,27 @@ FROM Competitions c
 LEFT JOIN CompetitionDays cd ON c.comp_id = cd.comp_id
 LEFT JOIN CompetitionEvent e ON cd.day_id = e.day_id
 LEFT JOIN UserCompetitions uc ON c.comp_id = uc.comp_id
-GROUP BY c.comp_id, c.event_name, c.starts_on, c.events_open, c.meet_type;
+GROUP BY c.comp_id, c.title, c.starts_on, c.entries_open, c.meet_type;
 
 CREATE VIEW EventsWithSwimmers AS
 SELECT 
     c.comp_id,
-    c.event_name as competition_name,
-    cd.day_name,
+    c.title as competition_name,
+    cd.day_title,
     e.event_id,
-    e.event_name,
-    COUNT(s.swimmerId) as total_swimmers
+    e.event_title,
+    COUNT(s.swimmer_id) as total_swimmers
 FROM Competitions c
 JOIN CompetitionDays cd ON c.comp_id = cd.comp_id
 JOIN CompetitionEvent e ON cd.day_id = e.day_id
 LEFT JOIN Swimmers s ON e.event_id = s.event_id
-GROUP BY c.comp_id, c.event_name, cd.day_name, e.event_id, e.event_name
-ORDER BY cd.day_id, e.event_id;
+GROUP BY c.comp_id, c.title, cd.day_title, e.event_id, e.event_title
+ORDER BY cd.day_order, e.event_order;
 
 CREATE VIEW UserLeaderboard AS
 SELECT 
     c.comp_id,
-    c.event_name as competition_name,
+    c.title as competition_name,
     u.username,
     uc.total_score,
     COUNT(p.pick_id) as total_picks
@@ -143,5 +145,5 @@ FROM UserCompetitions uc
 JOIN swimSwam_user u ON uc.public_user_id = u.public_user_id
 JOIN Competitions c ON uc.comp_id = c.comp_id
 LEFT JOIN Picks p ON uc.user_competition_id = p.user_competition_id
-GROUP BY c.comp_id, c.event_name, u.username, uc.total_score
+GROUP BY c.comp_id, c.title, u.username, uc.total_score
 ORDER BY c.comp_id, uc.total_score DESC;

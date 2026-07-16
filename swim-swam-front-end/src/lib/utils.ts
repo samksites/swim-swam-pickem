@@ -1,6 +1,6 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge";
-import type {  MeetData } from "@/types/meet";
+import type {  LoadedData, MeetData } from "@/types/meet";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -47,5 +47,27 @@ const checkCompetitionForSubmit = (swimMeet: MeetData) => {
 
   return { valid: true, message: errorMessage };
 };
+
+
+export const convertMeetData = (meet: LoadedData) => {
+  // Implement the conversion logic here
+  const mappedValues: Map<string, boolean> = new Map(Object.entries(meet.allEvents));
+  const meetData: MeetData = {
+    id: meet.id !== '-1' ? meet.id : "-1",
+    daysTitle: meet.daysTitle,
+    days: meet.days,
+    entriesCloseDate: meet.entriesCloseDate,
+    startDate: meet.startDate,
+    title: meet.title,
+    status: meet.status,
+    gender: meet.gender,
+    type: meet.type,
+    seedTimes: meet.seedTimes,
+    allEvents: mappedValues
+  };
+  return meetData;
+
+}
+
 
 export default checkCompetitionForSubmit;

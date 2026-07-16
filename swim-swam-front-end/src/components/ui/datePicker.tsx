@@ -15,10 +15,10 @@ import {
 type DatePickerProps = {
   txt?: string;
   savedDate?: Date;
-  action?: (value: Date | string) => void;
+  action?: (value: string) => void;
 }
 
-export function DatePicker({ txt, savedDate }: DatePickerProps) {
+export function DatePicker({ txt, savedDate, action }: DatePickerProps) {
   const [open, setOpen] = React.useState(false)
   const [date, setDate] = React.useState<Date | undefined>(undefined)
 
@@ -49,6 +49,9 @@ export function DatePicker({ txt, savedDate }: DatePickerProps) {
             captionLayout="dropdown"
             onSelect={(date) => {
               setDate(date)
+              if (date) {
+                action?.(date.toISOString().slice(0, 10));
+              }
               setOpen(false)
             }}
           />

@@ -1,17 +1,20 @@
-import exampleSwimMeet from "../data/exampleSwimMeet.json";
+import events from "@/data/events.json";
 
 export type Swimmer = {
+  id: string;
   name: string;
   time: string;
   // add other swimmer properties as needed
 };
 
+
 export type EventList = {
-  "name": string;
-  "used": boolean;
+  name: string;
+  used: boolean;
 }
 
 export type Event = {
+  id: string;
   title: string;
   swimmers: Swimmer[];
   swimmerCount?: number;
@@ -25,9 +28,25 @@ export type Event = {
 };
 
 export type Day = {
+  id: string;
   events: Event[];
   title: string;
-  // add other day properties as needed
+};
+
+export type LoadedData = {
+  id: string;
+  daysTitle: string[];
+  days: Day[];
+  entriesCloseDate: string;
+  startDate: string;
+  title: string;
+  status: number;
+  gender: string;
+  type: string;
+  seedTimes: boolean;
+  allEvents: Record<string, boolean>;
+  
+
 };
 
 export type MeetData = {
@@ -41,21 +60,30 @@ export type MeetData = {
   gender: string;
   type: string;
   seedTimes: boolean;
-  allEvents: EventList[];
-  // add other meet properties as needed
+  allEvents: Map<string, boolean>;
+};
+
+export type TestMeetData = {
+  allEvents: Map<string, boolean>;
 };
 
 export type MeetStore = {
-    meetData: typeof exampleSwimMeet;
-    setMeetData: (data: typeof exampleSwimMeet) => void;
+    meetData: MeetData
+    deletedData: Map<string, Set<string>>;
+    setMeetData: (data: MeetData) => void;
     updateTitle: (title: string) => void;
+  updateEntriesCloseDate: (date: string) => void;
+  updateStartDate: (date: string) => void;
     updateDistance: (distance: string) => void;
     updateGender: (gender: string) => void;
     updateDayEventAndAllEvents: (dayIndex: number, eventTitle: string) => void;
+    updateAllEvents: (eventsName: keyof typeof events) => void;
+    deletion: (type: string, id: string) => void;
     deleteDayEvent: (dayIndex: number, eventIndex: number, eventTitle: string) => void;
     updateDayTitle: (dayIndex: number, title: string) => void;
     deleteDay: (dayIndex: number) => void;
     addSwimmer: (dayIndex: number, eventIndex: number) => void;
+    addDay: () => void;
     updateSwimmerName: (dayIndex: number, eventIndex: number, swimmerIndex: number, name: string) => void;
     updateSwimmerTime: (dayIndex: number, eventIndex: number, swimmerIndex: number, time: string) => void;
     sortSwimmersByTime: (dayIndex: number, eventIndex: number) => void;
@@ -85,6 +113,7 @@ export type EventCompetitionCardProps =  {
 }
 
 export type CardProps = (EditCompetitionCardProps & EventCompetitionCardProps & SwimmersCardProps) & {
+    id?: string;
     title: string;
     type: 'editPage' | 'eventPage' | 'swimmers';
     index?: number;

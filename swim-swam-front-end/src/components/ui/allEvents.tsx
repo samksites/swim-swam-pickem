@@ -3,6 +3,7 @@ import { ScrollArea } from './scroll-area';
 import { useMeetStore } from "../../stores/useMeetStore";
 import { ArrowLeft } from './arrows';
 
+
 /**
  * Type for the AllEvents component
  */
@@ -14,24 +15,21 @@ type AllEventsProps = {
 
 const AllEvents: React.FC<AllEventsProps> = ({ backArrow, dayIndex }) => {
 
- 
+    
 
-    const allEvents = useMeetStore(state => state.meetData.allEvents);
-
+    const allEvents = useMeetStore(state => state.meetData.allEvents) as Map<string, boolean>;
     const addEventToDay = useMeetStore((state) => state.updateDayEventAndAllEvents);
-
-    const availableEvents = (allEvents ?? []).map((event, index) => (
-        !event.used ? (
-            <div className='w-full flex justify-center items-center' key={event.name + String(index)}>
-                <div  onClick={() => {addEventToDay(dayIndex, event.name); backArrow();}} className='hover:bg-blue-400 hover:cursor-pointer m-2 rounded-md text-center border-2 w-3/4 flex flex-col justify-center items-center'>
-                    {event.name}
+    const availableEvents = Array.from(allEvents.entries()).map(([key, value]) => 
+        value ? (
+            <div className='w-full flex justify-center items-center' key={key}>
+                <div  onClick={() => {addEventToDay(dayIndex, key); backArrow();}} className='hover:bg-blue-400 hover:cursor-pointer m-2 rounded-md text-center border-2 w-3/4 flex flex-col justify-center items-center'>
+                    {key}
                 </div>
             </div>
-        ) : null
-    ));
-
+        ) : null 
+    ) as React.ReactNode;
     return (
-        <div className='flex flex-col mt-4 justify-center items-center w-60 h-110 bg-white rounded-md'>
+        <div className='flex flex-col mt-4 justify-center items-center w-60 h-110 bg-white rounded-md mb-8'>
             <div className=' flex justify-start items-center w-full'>
                 <div className='hover:cursor-pointer hover:scale-110  -mt-8' onClick={backArrow}>
                     <ArrowLeft css={{ marginLeft: "8px" }} />

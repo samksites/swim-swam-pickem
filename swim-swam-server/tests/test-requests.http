@@ -3,7 +3,7 @@
 # Test with admin user
 
 ### with admin user
-GET http://localhost:3000/api/competitions/newComp/42Jklj34$342$
+GET http://localhost:3000/api/competitions/newComp/<ADMIN_USER_ID>
 Content-Type: application/json
 
 
@@ -14,13 +14,86 @@ Content-Type: application/json
 ### Test edit a competition without admin privileges
 PUT http://localhost:3000/api/competitions/update
 Content-Type: application/json
-userID: regular-user-456
+
 {
-  "competitionId": "8",
-  "name": "Updated Competition Name",
+  "id": "8",
+  "userId": "regular-user-456",
+  "title": "Updated Competition Name",
+  "type": "scm",
+  "status": 1,
+  "entriesCloseDate": "2024-08-15T00:00:00Z",
   "startDate": "2024-09-01T00:00:00Z",
-  "endDate": "2024-12-15T00:00:00Z",
-  "isActive": true
+  "gender": "m",
+  "seedTimes": true,
+  "days": [],
+  "allEvents": {}
+}
+
+### Test createMeet endpoint with admin user
+POST http://localhost:3000/api/competitions/createMeet
+Content-Type: application/json
+
+{
+  "userId": "<ADMIN_USER_ID>",
+  "id": "-1",
+  "title": "2026 World Championships",
+  "type": "scm",
+  "status": 1,
+  "entriesCloseDate": "2026-03-15T00:00:00Z",
+  "startDate": "2026-04-01T00:00:00Z",
+  "gender": "m",
+  "seedTimes": true,
+  "daysTitle": ["Day 1 - Heats", "Day 1 - Finals", "Day 2 - Heats", "Day 2 - Finals"],
+  "days": [
+    {
+      "id": "-1",
+      "title": "Day 1",
+      "events": [
+        {
+          "id": "-1",
+          "title": "100m Freestyle",
+          "swimmers": [
+            { "id": "-1", "name": "John Doe", "time": "47.52" },
+            { "id": "-1", "name": "Jane Smith", "time": "48.01" }
+          ]
+        }
+      ]
+    }
+  ],
+  "allEvents": {}
+}
+
+### Test updating the meet with admin user (using the ID from the created meet)
+PUT http://localhost:3000/api/competitions/update
+Content-Type: application/json
+
+{
+  "userId": "<ADMIN_USER_ID>",
+  "id": "2",
+  "title": "2222 World Championships",
+  "type": "scm",
+  "status": 1,
+  "entriesCloseDate": "2026-03-15T00:00:00Z",
+  "startDate": "2026-04-01T00:00:00Z",
+  "gender": "m",
+  "seedTimes": true,
+  "days": [
+    {
+      "id": "3",
+      "title": "Testing",
+      "events": [
+        {
+          "id": "-1",
+          "title": "100m Freestyle",
+          "swimmers": [
+            { "id": "-1", "name": "John Doe", "time": "47.52" },
+            { "id": "-1", "name": "Jane Smith", "time": "48.01" }
+          ]
+        }
+      ]
+    }
+  ],
+  "allEvents": {}
 }
 
 
