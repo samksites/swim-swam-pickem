@@ -11,7 +11,7 @@ CREATE TABLE Competitions (
     event_name VARCHAR(100) NOT NULL,
     created_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     entries_close TIMESTAMP, -- When events open for picks
-    status INTEGER DEFAULT -1 CHECK (status IN (-1, 0, 1)),
+    status INTEGER DEFAULT -1 CHECK (status IN (-1, 0, 1, 2)),
     starts_on TIMESTAMP,
     gender CHAR(1) DEFAULT 'B' CHECK (gender IN ('M', 'W', 'B')),
     seedTimes BOOLEAN DEFAULT TRUE,
