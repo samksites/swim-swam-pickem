@@ -65,6 +65,37 @@ export const queryCompetitionInfoUsers = {
     ORDER BY starts_on DESC
   `,
 
+  getCompetitionFullById: `
+    SELECT
+      c.comp_id,
+      c.title,
+      c.entries_open,
+      c.status,
+      c.starts_on,
+      c.gender,
+      c.meet_type,
+      d.day_id,
+      d.day_title,
+      d.day_order,
+      e.event_id,
+      e.event_title,
+      e.event_order,
+      s.swimmer_id,
+      s.swimmer_name,
+      s.swimmer_time,
+      s.place_finish
+    FROM Competitions c
+    LEFT JOIN CompetitionDays d ON d.comp_id = c.comp_id
+    LEFT JOIN CompetitionEvent e ON e.day_id = d.day_id
+    LEFT JOIN Swimmers s ON s.event_id = e.event_id
+    WHERE c.comp_id = $1
+    ORDER BY
+      d.day_order ASC NULLS LAST,
+      e.event_order ASC NULLS LAST,
+      s.place_finish ASC NULLS LAST,
+      s.swimmer_id ASC NULLS LAST
+  `,
+
   
 
 }
@@ -79,6 +110,40 @@ export const queryCompetitionInternalLogic = {
   WHERE c.comp_id = $1
   `,
 }
+
+export const buildCompetitionsFilterQueries = (
+  conditions: string[],
+  limitParamIndex: number,
+  offsetParamIndex: number,
+) => {
+  const whereClause = conditions.length > 0
+    ? `WHERE ${conditions.join(' AND ')}`
+    : '';
+
+  return {
+    dataQuery: `
+      SELECT
+        comp_id,
+        title,
+        created_on,
+        entries_open,
+        status,
+        starts_on,
+        gender,
+        meet_type
+      FROM Competitions
+      ${whereClause}
+      ORDER BY starts_on DESC
+      LIMIT $${limitParamIndex}
+      OFFSET $${offsetParamIndex}
+    `,
+    countQuery: `
+      SELECT COUNT(*)::int AS total_count
+      FROM Competitions
+      ${whereClause}
+    `,
+  };
+};
 
 export const competitionQueries = {
 

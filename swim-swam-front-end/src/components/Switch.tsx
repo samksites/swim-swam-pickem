@@ -30,6 +30,10 @@ Switch.displayName = SwitchPrimitives.Root.displayName
 
 type SwitchWithLabelProps = {
     label: string;
+  checked?: boolean;
+  defaultChecked?: boolean;
+  onCheckedChange?: (checked: boolean) => void;
+  id?: string;
 }
 
 /**
@@ -38,12 +42,19 @@ type SwitchWithLabelProps = {
  * @returns {JSX.Element} The rendered SwitchWithLabel component.
  */
 const SwitchWithLabel: React.FC<SwitchWithLabelProps> = (props) => {
+  const switchId = props.id ?? props.label.replace(/\s+/g, '-').toLowerCase();
+
     return (
         <div className="flex items-center flex-col w-60 mb-12">
-            <label htmlFor="switch" className="mb-4 text-s text-white">
+      <label htmlFor={switchId} className="mb-4 text-s text-white">
                 {props.label}
             </label>
-            <Switch id="switch" />
+      <Switch
+        id={switchId}
+        checked={props.checked}
+        defaultChecked={props.defaultChecked}
+        onCheckedChange={props.onCheckedChange}
+      />
         </div>
     )
 }

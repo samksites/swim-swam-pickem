@@ -2,7 +2,7 @@
 -- This demonstrates how to populate the database with realistic data
 
 -- Insert sample users
-INSERT INTO swimSwam_user (public_user_id, username, email, admin) VALUES
+INSERT INTO swimswam_user (public_user_id, username, email, admin) VALUES
 (1001, 'swimmer_fan_1', 'fan1@example.com', false),
 (1002, 'pool_expert', 'expert@example.com', false),
 (1003, 'admin_user', 'admin@swimswam.com', true);

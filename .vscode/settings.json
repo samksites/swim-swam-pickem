@@ -1,0 +1,16 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "/^npm run -s build$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^cd \\.\\./swim-swam-server && npm run -s build$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^cd swim-swam-front-end && npm run build$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
+}

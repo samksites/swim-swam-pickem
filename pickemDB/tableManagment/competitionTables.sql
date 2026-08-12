@@ -1,46 +1,51 @@
 -- Drop tables in reverse dependency order
 
-DROP TABLE IF EXISTS Swimmers;
-DROP TABLE IF EXISTS CompetitionEvent;
+DROP TABLE IF EXISTS SwimmerEntries;
+DROP TABLE IF EXISTS CompetitionEvents;
 DROP TABLE IF EXISTS CompetitionDays;
 DROP TABLE IF EXISTS Competitions;
 
 -- Competitions table (main competition info)
 CREATE TABLE Competitions (
     comp_id SERIAL PRIMARY KEY,
-    title VARCHAR(100) NOT NULL,
+    event_name VARCHAR(100) NOT NULL,
     created_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    entries_open TIMESTAMP NOT NULL,
-    status VARCHAR(20) DEFAULT 'upcoming' CHECK (status IN ('upcoming', 'current', 'completed')),
-    starts_on TIMESTAMP NOT NULL,
-    gender CHAR(1) CHECK (gender IN ('M', 'W', 'B')),
-    meet_type VARCHAR(3) NOT NULL CHECK (meet_type IN ('SCY', 'SCM', 'LCM'))
+    entries_close TIMESTAMP, -- When events open for picks
+    status INTEGER DEFAULT -1 CHECK (status IN (-1, 0, 1, 2)),
+    starts_on TIMESTAMP,
+    gender CHAR(1) DEFAULT 'B' CHECK (gender IN ('M', 'W', 'B')),
+    seedTimes BOOLEAN DEFAULT TRUE,
+    meet_type VARCHAR(3) DEFAULT 'SCY' CHECK (meet_type IN ('SCY', 'SCM', 'LCM')),
+    updated_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_by VARCHAR(30)
 );
-
 -- Competition Days (each competition can have multiple days)
 CREATE TABLE CompetitionDays (
     day_id SERIAL PRIMARY KEY,
     comp_id INT NOT NULL,
-    day_title VARCHAR(50) NOT NULL,
-    day_order INT NOT NULL,
+    day_order INT NOT NULL, -- e.g., 0 for Day 1, 1 for Day 2, etc.
+    day_name VARCHAR(50) NOT NULL, -- e.g., "Day 1", "Preliminaries", "Finals"
+    updated_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (comp_id) REFERENCES Competitions(comp_id) ON DELETE CASCADE,
-    UNIQUE(comp_id, day_title)
+    UNIQUE(comp_id, day_name)
 );
-
 -- Events table (each day has multiple events)
-CREATE TABLE CompetitionEvent (
+CREATE TABLE CompetitionEvents (
     event_id SERIAL PRIMARY KEY,
     day_id INT NOT NULL,
-    event_title VARCHAR(100) NOT NULL,
-    event_order INT NOT NULL,
+    event_name VARCHAR(100) NOT NULL, -- e.g., "Men's 100m Freestyle"
+    event_day_order INT NOT NULL, -- e.g., 1 for first event of the day, etc.
+    updated_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(day_id, event_name),
     FOREIGN KEY (day_id) REFERENCES CompetitionDays(day_id) ON DELETE CASCADE
 );
 
-CREATE TABLE Swimmers (
+CREATE TABLE SwimmerEntries (
     swimmer_id SERIAL PRIMARY KEY,
     event_id INT NOT NULL,
     swimmer_name VARCHAR(100) NOT NULL,
-    swimmer_time VARCHAR(20),
-    place_finish INT NOT NULL,
-    FOREIGN KEY (event_id) REFERENCES CompetitionEvent(event_id) ON DELETE CASCADE
+    place_finish INT, -- 1 for first place, 2 for second, etc.
+    swimmer_time NUMERIC, -- e.g., "48.23"
+    updated_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (event_id) REFERENCES CompetitionEvents(event_id) ON DELETE CASCADE
 );

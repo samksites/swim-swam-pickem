@@ -40,7 +40,7 @@ SELECT
     p.points_earned
 FROM Picks p
 JOIN UserCompetitions uc ON p.user_competition_id = uc.user_competition_id
-JOIN swimSwam_user u ON uc.public_user_id = u.public_user_id
+JOIN swimswam_user u ON uc.public_user_id = u.public_user_id
 JOIN Events e ON p.event_id = e.event_id
 JOIN CompetitionDays cd ON e.day_id = cd.day_id
 LEFT JOIN Swimmers s1 ON e.event_id = s1.event_id AND s1.place_finish = 1

@@ -101,6 +101,7 @@ export type EditCompetitionCardProps =  {
     status?: number;
     dates?: Array<Array<string>>;
     editable?: boolean;
+  onEditClick?: () => void;
     
 }
 
@@ -118,4 +119,5 @@ export type CardProps = (EditCompetitionCardProps & EventCompetitionCardProps & 
     type: 'editPage' | 'eventPage' | 'swimmers';
     index?: number;
     clickEvent?: (day: number, event: number) => void;
+  onEditCompetition?: (competitionId: string) => void;
 };

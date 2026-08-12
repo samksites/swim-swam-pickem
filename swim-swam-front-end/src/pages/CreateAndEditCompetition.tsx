@@ -7,7 +7,6 @@ import { Input } from '@/components/ui/input';
 import {
   Pagination,
   PaginationContent,
-  PaginationEllipsis,
   PaginationItem,
   PaginationLink,
   PaginationNext,
@@ -19,16 +18,272 @@ import { IoClose } from "react-icons/io5";
 import { Combobox } from '@/components/ui/combobox';
 import { DatePicker } from '@/components/ui/datePicker';
 import { Button } from '@/components/ui/button';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import AllEvents from '../components/ui/allEvents';
 import { useMeetStore } from "../stores/useMeetStore";
 import type { CreateCompetitionProps } from "../types/components";
 import { useAlertStore } from '@/stores/useAlertStore';
-import checkCompetitionForSubmit, { convertMeetData } from '../lib/utils';
+import checkCompetitionForSubmit, { convertMeetData, validateCompetitionDates } from '../lib/utils';
 import type { MeetData } from '@/types/meet';
 import meetJson from "../data/templateMeet.json";
 import { meetApi } from '@/services/meetApi';
+import type { AdminUserListItem, CompetitionEditorResponse, CompetitionListItem } from '@/services/meetApi';
+import events from '@/data/events.json';
 
 const ADMIN_USER_ID = (import.meta.env.VITE_ADMIN_USER_ID as string | undefined)?.trim() ?? "";
+
+const areAdminUserListsEqual = (a: AdminUserListItem[], b: AdminUserListItem[]): boolean => {
+    if (a.length !== b.length) return false;
+
+    for (let index = 0; index < a.length; index++) {
+        const left = a[index];
+        const right = b[index];
+        if (left.user_id !== right.user_id || left.username !== right.username || left.admin !== right.admin) {
+            return false;
+        }
+    }
+
+    return true;
+};
+
+const ManageUsersView: React.FC = () => {
+    const [searchText, setSearchText] = React.useState<string>('');
+    const [users, setUsers] = React.useState<AdminUserListItem[]>([]);
+    const [loadError, setLoadError] = React.useState<string>('');
+    const [currentPage, setCurrentPage] = React.useState<number>(1);
+    const [totalPages, setTotalPages] = React.useState<number>(0);
+
+    React.useEffect(() => {
+        setCurrentPage(1);
+    }, [searchText]);
+
+    React.useEffect(() => {
+        const run = window.setTimeout(async () => {
+            if (!ADMIN_USER_ID) {
+                const missingIdMessage = 'Missing VITE_ADMIN_USER_ID. Set it in swim-swam-front-end/.env.local';
+                setLoadError((prev) => (prev === missingIdMessage ? prev : missingIdMessage));
+                setUsers((prev) => (prev.length === 0 ? prev : []));
+                setTotalPages((prev) => (prev === 0 ? prev : 0));
+                return;
+            }
+
+            setLoadError((prev) => (prev === '' ? prev : ''));
+
+            try {
+                const allUsers = await meetApi.searchUsersByName(searchText, ADMIN_USER_ID);
+                const nextTotalPages = Math.max(1, Math.ceil(allUsers.length / PAGE_SIZE));
+                const clampedPage = Math.max(1, Math.min(nextTotalPages, currentPage));
+                const start = (clampedPage - 1) * PAGE_SIZE;
+                const pageItems = allUsers.slice(start, start + PAGE_SIZE);
+
+                setUsers((prev) => (areAdminUserListsEqual(prev, pageItems) ? prev : pageItems));
+                setTotalPages((prev) => (prev === nextTotalPages ? prev : nextTotalPages));
+                if (clampedPage !== currentPage) {
+                    setCurrentPage(clampedPage);
+                }
+            } catch (error) {
+                const message = error instanceof Error ? error.message : 'Failed to load users';
+                setLoadError((prev) => (prev === message ? prev : message));
+                setUsers((prev) => (prev.length === 0 ? prev : []));
+                setTotalPages((prev) => (prev === 0 ? prev : 0));
+            }
+        }, 250);
+
+        return () => {
+            window.clearTimeout(run);
+        };
+    }, [searchText, currentPage]);
+
+    const handlePageChange = (nextPage: number) => {
+        const clamped = Math.max(1, Math.min(totalPages, nextPage));
+        setCurrentPage((prev) => (prev === clamped ? prev : clamped));
+    };
+
+    const userRows = users.map((user) => (
+        <div
+            key={user.user_id}
+            className='bg-white rounded-lg px-3 py-2 w-full max-w-2xl mx-auto flex items-center justify-between gap-3 min-h-12'
+            data-user-id={user.user_id}
+        >
+            <div className='text-gray-900 font-semibold min-w-0 truncate text-sm'>
+                {user.username}
+            </div>
+            <div className='text-xs text-gray-700 whitespace-nowrap'>
+                {user.admin ? 'Admin' : 'Regular user'}
+            </div>
+            <Button type='button' variant='secondary' className='bg-blue-500 hover:bg-blue-600 text-white h-8 px-3 text-xs'>
+                Edit
+            </Button>
+        </div>
+    ));
+
+    return (
+        <div className='flex flex-col w-full h-full min-h-[70vh]'>
+            <div className='flex flex-row justify-center items-center w-full mt-12 mb-8'>
+                <Input
+                    className='w-1/2 text-white'
+                    placeholder='Search for users'
+                    value={searchText}
+                    onChange={(event) => setSearchText(event.target.value)}
+                />
+            </div>
+
+            <div className='flex-1'>
+                <ScrollArea className='w-full max-w-3xl mx-auto rounded-lg border-2 border-blue-900 h-[52vh] max-h-[calc(100vh-260px)] min-h-[260px] px-3 py-3'>
+                    <div className='w-full flex flex-col gap-2'>
+                        {userRows}
+                    </div>
+                </ScrollArea>
+                {loadError ? <p className='text-center text-red-300 mt-2'>{loadError}</p> : null}
+                {!loadError && userRows.length === 0 ? (
+                    <p className='text-center text-gray-300 mt-2'>No users match your search.</p>
+                ) : null}
+            </div>
+
+            {totalPages > 1 ? (
+                <div className='mt-auto pt-3'>
+                    <Pagination>
+                        <PaginationContent>
+                            <PaginationItem>
+                                <PaginationPrevious
+                                    className='text-blue-400'
+                                    href="#"
+                                    onClick={(event) => {
+                                        event.preventDefault();
+                                        handlePageChange(currentPage - 1);
+                                    }}
+                                />
+                            </PaginationItem>
+                            {Array.from({ length: totalPages }, (_, index) => {
+                                const pageNumber = index + 1;
+                                return (
+                                    <PaginationItem key={pageNumber}>
+                                        <PaginationLink
+                                            className='text-blue-400'
+                                            href="#"
+                                            isActive={pageNumber === currentPage}
+                                            onClick={(event) => {
+                                                event.preventDefault();
+                                                handlePageChange(pageNumber);
+                                            }}
+                                        >
+                                            {pageNumber}
+                                        </PaginationLink>
+                                    </PaginationItem>
+                                );
+                            })}
+                            <PaginationItem>
+                                <PaginationNext
+                                    className='text-blue-400'
+                                    href="#"
+                                    onClick={(event) => {
+                                        event.preventDefault();
+                                        handlePageChange(currentPage + 1);
+                                    }}
+                                />
+                            </PaginationItem>
+                        </PaginationContent>
+                    </Pagination>
+                </div>
+            ) : null}
+        </div>
+    );
+};
+const PAGE_SIZE = 10;
+type CompetitionFilterStatus = 'incomplete' | 'current' | 'upcoming' | 'completed';
+
+const mapCompetitionStatusToCardNumber = (status: CompetitionFilterStatus): number => {
+    if (status === 'incomplete') return -1;
+    if (status === 'upcoming') return 0;
+    if (status === 'current') return 1;
+    return 2;
+};
+
+const formatDateLabel = (value?: string): string => {
+    if (!value) return '-';
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+        return value;
+    }
+
+    return parsed.toISOString().slice(0, 10);
+};
+
+const mapCompetitionStatusToMeetStatus = (status: CompetitionFilterStatus): number => {
+    if (status === 'incomplete') return -1;
+    if (status === 'upcoming') return 0;
+    if (status === 'current') return 1;
+    return 2;
+};
+
+const getEventsCatalogKey = (gender: 'm' | 'w' | 'c', type: 'scy' | 'scm' | 'lcm'): keyof typeof events => {
+    if (gender === 'w') return `womens${type}` as keyof typeof events;
+    return `mens${type}` as keyof typeof events;
+};
+
+const buildAllEventsMap = (gender: 'm' | 'w' | 'c', type: 'scy' | 'scm' | 'lcm', days: CompetitionEditorResponse['days']): Map<string, boolean> => {
+    const eventKey = getEventsCatalogKey(gender, type);
+    const allEventsMap = new Map<string, boolean>(
+        Object.keys(events[eventKey]).map((eventName) => [eventName, true])
+    );
+
+    for (const day of days) {
+        for (const event of day.events) {
+            if (allEventsMap.has(event.title)) {
+                allEventsMap.set(event.title, false);
+            }
+        }
+    }
+
+    return allEventsMap;
+};
+
+const competitionToMeetData = (competition: CompetitionEditorResponse): MeetData => {
+    const normalizedDays = competition.days.map((day) => ({
+        ...day,
+        events: day.events.map((event) => ({
+            ...event,
+            swimmers: event.swimmers.map((swimmer) => ({
+                ...swimmer,
+                time: swimmer.time ?? '',
+            })),
+        })),
+    }));
+
+    return {
+        id: String(competition.id),
+        title: competition.title,
+        type: competition.type,
+        status: mapCompetitionStatusToMeetStatus(competition.status),
+        entriesCloseDate: competition.entriesCloseDate ?? '',
+        startDate: competition.startDate ?? '',
+        gender: competition.gender,
+        daysTitle: normalizedDays.map((day) => day.title),
+        days: normalizedDays,
+        seedTimes: true,
+        allEvents: buildAllEventsMap(competition.gender, competition.type, normalizedDays),
+    };
+};
+
+const areCompetitionListsEqual = (a: CompetitionListItem[], b: CompetitionListItem[]): boolean => {
+    if (a.length !== b.length) return false;
+
+    for (let i = 0; i < a.length; i++) {
+        const left = a[i];
+        const right = b[i];
+        if (
+            left.comp_id !== right.comp_id ||
+            left.title !== right.title ||
+            left.status !== right.status ||
+            left.starts_on !== right.starts_on ||
+            left.entries_open !== right.entries_open
+        ) {
+            return false;
+        }
+    }
+
+    return true;
+};
 
 const oneYearFromNowIsoDate = (): string => {
     const date = new Date();
@@ -60,6 +315,20 @@ const parseOptionalDate = (value: string): Date | undefined => {
     return Number.isNaN(parsed.getTime()) ? undefined : parsed;
 };
 
+const MS_IN_DAY = 24 * 60 * 60 * 1000;
+
+const toUtcDateOnly = (value: Date): Date => {
+    return new Date(Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate()));
+};
+
+const addDaysUtc = (value: Date, days: number): Date => {
+    return new Date(value.getTime() + days * MS_IN_DAY);
+};
+
+const formatDateOnly = (value: Date): string => {
+    return value.toISOString().slice(0, 10);
+};
+
 /**
  * Component to create and edit competitions
  * @returns primary content of the page
@@ -78,6 +347,10 @@ const CreateAndEditCompetition: React.FC = () => {
     let content;
     if(activeTab === 0) {
         content = <ViewCompetitions />;
+    } else if (activeTab === 2) {
+        content = <ViewCompetitions liveOnly={true} />;
+    } else if (activeTab === 3) {
+        content = <ManageUsersView />;
     } else{
         content = <CreateCompetition  id ={"-1"}/>;
     }
@@ -107,52 +380,234 @@ const CreateAndEditCompetition: React.FC = () => {
 
 
 // ViewCompetitions component to display all the competitions
-const ViewCompetitions: React.FC = () => {
+const ViewCompetitions: React.FC<{ liveOnly?: boolean }> = ({ liveOnly = false }) => {
+    const [searchText, setSearchText] = React.useState<string>('');
+    const [showActiveCompetitions, setShowActiveCompetitions] = React.useState<boolean>(false);
+    const [showUnfinishedCompetitions, setShowUnfinishedCompetitions] = React.useState<boolean>(true);
+    const [showUpcomingCompetitions, setShowUpcomingCompetitions] = React.useState<boolean>(false);
+    const [competitions, setCompetitions] = React.useState<CompetitionListItem[]>([]);
+    const [loadError, setLoadError] = React.useState<string>('');
+    const [currentPage, setCurrentPage] = React.useState<number>(1);
+    const [totalPages, setTotalPages] = React.useState<number>(0);
+    const [isEditorOpen, setIsEditorOpen] = React.useState<boolean>(false);
+
+    const setMeetData = useMeetStore((state) => state.setMeetData);
+
+    const setAlert = useAlertStore((state) => state.setAlert);
+
+    React.useEffect(() => {
+        setCurrentPage(1);
+    }, [searchText, showActiveCompetitions, showUnfinishedCompetitions, showUpcomingCompetitions]);
+
+    React.useEffect(() => {
+        const statuses: CompetitionFilterStatus[] = [];
+        if (!liveOnly) {
+            if (showUnfinishedCompetitions) statuses.push('incomplete');
+            if (showActiveCompetitions) statuses.push('current');
+            if (showUpcomingCompetitions) statuses.push('upcoming');
+        }
+
+        const run = window.setTimeout(async () => {
+            if (!ADMIN_USER_ID) {
+                const missingIdMessage = 'Missing VITE_ADMIN_USER_ID. Set it in swim-swam-front-end/.env.local';
+                setLoadError((prev) => (prev === missingIdMessage ? prev : missingIdMessage));
+                setCompetitions((prev) => (prev.length === 0 ? prev : []));
+                setTotalPages((prev) => (prev === 0 ? prev : 0));
+                return;
+            }
+
+            setLoadError((prev) => (prev === '' ? prev : ''));
+
+            try {
+                if (liveOnly) {
+                    const allActive = await meetApi.getActiveCompetitions(ADMIN_USER_ID);
+                    const normalizedSearch = searchText.trim().toLowerCase();
+                    const filtered = normalizedSearch.length > 0
+                        ? allActive.filter((competition) => competition.title.toLowerCase().includes(normalizedSearch))
+                        : allActive;
+
+                    const nextTotalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+                    const clampedPage = Math.max(1, Math.min(nextTotalPages, currentPage));
+                    const start = (clampedPage - 1) * PAGE_SIZE;
+                    const pageItems = filtered.slice(start, start + PAGE_SIZE);
+
+                    setCompetitions((prev) => (areCompetitionListsEqual(prev, pageItems) ? prev : pageItems));
+                    setTotalPages((prev) => (prev === nextTotalPages ? prev : nextTotalPages));
+                    if (clampedPage !== currentPage) {
+                        setCurrentPage(clampedPage);
+                    }
+                } else {
+                    const result = await meetApi.getCompetitions({
+                        statuses,
+                        search: searchText,
+                        page: currentPage,
+                        pageSize: PAGE_SIZE,
+                    }, ADMIN_USER_ID);
+
+                    setCompetitions((prev) => (areCompetitionListsEqual(prev, result.items) ? prev : result.items));
+                    setTotalPages((prev) => (prev === result.totalPages ? prev : result.totalPages));
+                }
+            } catch (error) {
+                const message = error instanceof Error ? error.message : 'Failed to load competitions';
+                setLoadError((prev) => (prev === message ? prev : message));
+                setCompetitions((prev) => (prev.length === 0 ? prev : []));
+                setTotalPages((prev) => (prev === 0 ? prev : 0));
+            }
+        }, 250);
+
+        return () => {
+            window.clearTimeout(run);
+        };
+    }, [searchText, showActiveCompetitions, showUnfinishedCompetitions, showUpcomingCompetitions, currentPage, liveOnly]);
+
+    const closeEditor = () => {
+        setIsEditorOpen(false);
+    };
+
+    const handleEditCompetition = async (competitionId: string) => {
+        if (!ADMIN_USER_ID) {
+            setAlert?.({
+                show: true,
+                message: 'Missing VITE_ADMIN_USER_ID. Set it in swim-swam-front-end/.env.local',
+                confirmAction: () => {},
+            });
+            return;
+        }
+
+        try {
+            const competitionData = await meetApi.getCompetitionById(competitionId, ADMIN_USER_ID);
+            setMeetData(competitionToMeetData(competitionData));
+            setIsEditorOpen(true);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : 'Failed to load competition';
+            setAlert?.({
+                show: true,
+                message,
+                confirmAction: () => {},
+            });
+        }
+    };
+
+    const cards = competitions.map((competition) => (
+        <Card
+            key={competition.comp_id}
+            id={String(competition.comp_id)}
+            title={competition.title}
+            type='editPage'
+            status={mapCompetitionStatusToCardNumber(competition.status)}
+            dates={[
+                ['Starts on:', formatDateLabel(competition.starts_on)],
+                ['Ends on:', formatDateLabel(competition.entries_open)],
+            ]}
+            editable={competition.status === 'incomplete' || competition.status === 'upcoming'}
+            onEditCompetition={handleEditCompetition}
+        />
+    ));
+
+    const handlePageChange = (nextPage: number) => {
+        const clamped = Math.max(1, Math.min(totalPages, nextPage));
+        setCurrentPage((prev) => (prev === clamped ? prev : clamped));
+    };
+
     return (
-        <div className='Flex flex-col w-full h-full'>
+        <div className='flex flex-col w-full h-full min-h-[70vh]'>
 
             <div className='flex flex-row justify-center items-center w-full mt-12 mb-8'>
-             <Input className='w-1/2' placeholder='Search for competitions'/>
+             <Input
+                className='w-1/2 text-white'
+                placeholder='Search for competitions'
+                value={searchText}
+                onChange={(event) => setSearchText(event.target.value)}
+             />
             </div>
            
 
-            <div className='flex flex-row justify-center flex-wrap w-full'>
-                <SwitchLabel label='Show active competitions'/>
-                <SwitchLabel  label='Show unfinished competitions'/>
-                <SwitchLabel label='Show finished competitions'/>
+            {liveOnly ? null : (
+                <div className='flex flex-row justify-center flex-wrap w-full'>
+                    <SwitchLabel
+                        label='Show active competitions'
+                        checked={showActiveCompetitions}
+                        onCheckedChange={setShowActiveCompetitions}
+                        id='show-active-competitions'
+                    />
+                    <SwitchLabel
+                        label='Show unfinished competitions'
+                        checked={showUnfinishedCompetitions}
+                        onCheckedChange={setShowUnfinishedCompetitions}
+                        id='show-unfinished-competitions'
+                    />
+                    <SwitchLabel
+                        label='Show upcoming competitions'
+                        checked={showUpcomingCompetitions}
+                        onCheckedChange={setShowUpcomingCompetitions}
+                        id='show-upcoming-competitions'
+                    />
+                </div>
+            )}
+            <div className='flex-1'>
+                <div className='flex flex-row justify-evenly flex-wrap w-full'>
+                    {cards}
+                </div>
+                {loadError ? <p className='text-center text-red-300 mt-2'>{loadError}</p> : null}
+                {!loadError && cards.length === 0 ? (
+                    <p className='text-center text-gray-300 mt-2'>No competitions match your filters.</p>
+                ) : null}
             </div>
-            <div className='flex flex-row justify-evenly flex-wrap w-full'>
-                <Card title='Hold' type='editPage' status={0}/>
-                <Card title='Hold' type='editPage' status={1}/>
-                <Card title='Hold' type='editPage' status={2} dates={[["stats on:", "05/07/2025"],["Ends on:", "05/07/2025"]]} editable={true}/>
-            </div>
-            <div className='mt-3'>
-                <Pagination>
-                    <PaginationContent className=''>
-                        <PaginationItem>
-                            <PaginationPrevious className=' text-blue-400' href="#" />
-                        </PaginationItem>
-                        <PaginationItem>
-                            <PaginationLink className=' text-blue-400' href="#">1</PaginationLink>
-                        </PaginationItem>
-                        <PaginationItem>
-                            <PaginationLink className=' text-blue-400' href="#">2</PaginationLink>
-                        </PaginationItem>
-                        <PaginationItem>
-                            <PaginationLink className=' text-blue-400' href="#">3</PaginationLink>
-                        </PaginationItem>
-                        <PaginationItem>
-                            <PaginationEllipsis className=' text-blue-400'/>
-                        </PaginationItem>
-                        <PaginationItem>
-                            <PaginationLink className=' text-blue-400' href="#">10</PaginationLink>
-                        </PaginationItem>
-                        <PaginationItem>
-                            <PaginationNext className=' text-blue-400' href="#" />
-                        </PaginationItem>
-                    </PaginationContent>
-                </Pagination>
-            </div>
+            {totalPages > 1 ? (
+                <div className='mt-auto pt-3'>
+                    <Pagination>
+                        <PaginationContent className=''>
+                            <PaginationItem>
+                                <PaginationPrevious
+                                    className='text-blue-400'
+                                    href="#"
+                                    onClick={(event) => {
+                                        event.preventDefault();
+                                        handlePageChange(currentPage - 1);
+                                    }}
+                                />
+                            </PaginationItem>
+                            {Array.from({ length: totalPages }, (_, index) => {
+                                const pageNumber = index + 1;
+                                return (
+                                    <PaginationItem key={pageNumber}>
+                                        <PaginationLink
+                                            className='text-blue-400'
+                                            href="#"
+                                            isActive={pageNumber === currentPage}
+                                            onClick={(event) => {
+                                                event.preventDefault();
+                                                handlePageChange(pageNumber);
+                                            }}
+                                        >
+                                            {pageNumber}
+                                        </PaginationLink>
+                                    </PaginationItem>
+                                );
+                            })}
+                            <PaginationItem>
+                                <PaginationNext
+                                    className='text-blue-400'
+                                    href="#"
+                                    onClick={(event) => {
+                                        event.preventDefault();
+                                        handlePageChange(currentPage + 1);
+                                    }}
+                                />
+                            </PaginationItem>
+                        </PaginationContent>
+                    </Pagination>
+                </div>
+            ) : null}
+
+            {isEditorOpen ? (
+                <>
+                    <div className='absolute top-0 left-0 z-2 w-full h-full flex justify-center items-start pt-8'>
+                        <CompetitionEditor onClick={closeEditor} />
+                    </div>
+                    <BlurBackground zIndex={1} />
+                </>
+            ) : null}
 
         </div>
     );
@@ -228,9 +683,27 @@ const CompetitionEditorEventSettings: React.FC = () => {
     const setEntriesCloseDate = useMeetStore((state: MeetStoreState) => state.updateEntriesCloseDate);
     const setStartDate = useMeetStore((state: MeetStoreState) => state.updateStartDate);
 
+    const todayUtc = toUtcDateOnly(new Date());
+    const minEntriesCloseDate = addDaysUtc(todayUtc, 1);
+    const entriesCloseDateParsed = parseOptionalDate(entriesCloseDate);
+    const normalizedEntriesDate = entriesCloseDateParsed && toUtcDateOnly(entriesCloseDateParsed).getTime() >= minEntriesCloseDate.getTime()
+        ? toUtcDateOnly(entriesCloseDateParsed)
+        : minEntriesCloseDate;
+    const minStartDate = addDaysUtc(normalizedEntriesDate, 1);
+    const meetStartDateParsed = parseOptionalDate(meetStartDate);
+
     useEffect(() => {
-        
-    }, [meetType]);
+        const entriesValue = formatDateOnly(normalizedEntriesDate);
+        if (entriesCloseDate !== entriesValue) {
+            setEntriesCloseDate?.(entriesValue);
+        }
+
+        const parsedStartDate = meetStartDateParsed ? toUtcDateOnly(meetStartDateParsed) : undefined;
+        if (!parsedStartDate || parsedStartDate.getTime() < minStartDate.getTime()) {
+            setStartDate?.(formatDateOnly(minStartDate));
+        }
+    }, [entriesCloseDate, meetStartDate, normalizedEntriesDate, minStartDate, meetStartDateParsed, setEntriesCloseDate, setStartDate, meetType]);
+
     return (
         <div className='flex flex-col justify-center items-center w-full h-full'>
             <div className='flex flex-col justify-center items-center w-full'>
@@ -267,11 +740,11 @@ const CompetitionEditorEventSettings: React.FC = () => {
                 </div>
                 <div className='w-full flex flex-col sm:flex-row items-center justify-center h-auto'>
                     <div className='h-40 sm:ml-4 sm:mr-4 md:ml-10 md:mr-10 lg:ml-20 lg:mr-20'>
-                        <DatePicker txt='Competition entries close date' savedDate={parseOptionalDate(entriesCloseDate)} action={setEntriesCloseDate}/>
+                        <DatePicker txt='Competition entries close date' minDate={minEntriesCloseDate} savedDate={parseOptionalDate(entriesCloseDate)} action={setEntriesCloseDate}/>
                     </div>
                     
                     <div className='h-40 sm:ml-4 sm:mr-4 md:ml-10 md:mr-10 lg:ml-20 lg:mr-20'>
-                        <DatePicker  txt='Competition start date' savedDate={parseOptionalDate(meetStartDate)} action={setStartDate}/>
+                        <DatePicker  txt='Competition start date' minDate={minStartDate} savedDate={parseOptionalDate(meetStartDate)} action={setStartDate}/>
                     </div>
                 </div>
             </div>
@@ -352,7 +825,7 @@ const CompetitionEditorEvents: React.FC<CompetitionEditorEventsProps> = ({ handl
         days = meetDays.map((day, index) => {
 
             return (
-                <Card key={index + day.title} clickEvent={editEvent} handleAddEvent={handleAddEvent} index={index} title={day.title} type={'eventPage'} id={day.id} />
+                <Card key={day.id ?? String(index)} clickEvent={editEvent} handleAddEvent={handleAddEvent} index={index} title={day.title} type={'eventPage'} id={day.id} />
             );
         });
     }
@@ -390,25 +863,40 @@ const CompetitionEditor: React.FC<CompetitionEditorProps> = ({onClick }) => {
 
     const meetData = useMeetStore((state) => state.meetData);
 
+    const persistMeet = async (nextStatus?: number): Promise<void> => {
+        const meetDataToSave: MeetData = {
+            ...meetData,
+            status: nextStatus ?? meetData.status,
+            entriesCloseDate: getValidDateOrDefault(meetData.entriesCloseDate),
+            startDate: getValidDateOrDefault(meetData.startDate),
+        };
+
+        if (meetData.id === "-1") {
+            const savedMeet = await meetApi.createMeet(meetDataToSave, ADMIN_USER_ID);
+            useMeetStore.getState().setMeetData(savedMeet);
+        } else {
+            const updatedMeet = await meetApi.updateMeet(meetDataToSave, ADMIN_USER_ID);
+            useMeetStore.getState().setMeetData(updatedMeet);
+        }
+    };
+
     const saveMeet = async () => {
         try {
             if (!ADMIN_USER_ID) {
                 throw new Error('Missing VITE_ADMIN_USER_ID. Set it in swim-swam-front-end/.env.local');
             }
 
-            const meetDataToSave: MeetData = {
-                ...meetData,
-                entriesCloseDate: getValidDateOrDefault(meetData.entriesCloseDate),
-                startDate: getValidDateOrDefault(meetData.startDate),
-            };
-
-            if (meetData.id === "-1") {
-                const savedMeet = await meetApi.createMeet(meetDataToSave, ADMIN_USER_ID);
-                useMeetStore.getState().setMeetData(savedMeet);
-            } else {
-                const updatedMeet = await meetApi.updateMeet(meetDataToSave, ADMIN_USER_ID);
-                useMeetStore.getState().setMeetData(updatedMeet);
+            const dateValidation = validateCompetitionDates(meetData.entriesCloseDate, meetData.startDate);
+            if (!dateValidation.valid) {
+                setAlert?.({
+                    show: true,
+                    message: dateValidation.message,
+                    confirmAction: () => {},
+                });
+                return;
             }
+
+            await persistMeet();
             setAlert?.({
                 show: true,
                 message: "Competition saved successfully.",
@@ -420,6 +908,30 @@ const CompetitionEditor: React.FC<CompetitionEditorProps> = ({onClick }) => {
             setAlert?.({
                 show: true,
                 message: `Failed to save competition: ${errorMessage}`,
+                confirmAction: () => {},
+            });
+        }
+    };
+
+    const submitCompetitionAsUpcoming = async () => {
+        try {
+            if (!ADMIN_USER_ID) {
+                throw new Error('Missing VITE_ADMIN_USER_ID. Set it in swim-swam-front-end/.env.local');
+            }
+
+            await persistMeet(0);
+            setAlert?.({
+                show: true,
+                message: "Competition submitted successfully. Status set to upcoming.",
+                confirmAction: () => {
+                    onClick?.();
+                },
+            });
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : "Unknown submit error";
+            setAlert?.({
+                show: true,
+                message: `Failed to submit competition: ${errorMessage}`,
                 confirmAction: () => {},
             });
         }
@@ -455,6 +967,16 @@ const CompetitionEditor: React.FC<CompetitionEditorProps> = ({onClick }) => {
     const handleSubmitCompetition = () => {
         const meetData = useMeetStore.getState().meetData;
 
+        const dateValidation = validateCompetitionDates(meetData.entriesCloseDate, meetData.startDate);
+        if (!dateValidation.valid) {
+            setAlert?.({
+                show: true,
+                message: dateValidation.message,
+                confirmAction: () => {},
+            });
+            return;
+        }
+
         const submitValidation = checkCompetitionForSubmit(meetData);
 
         if (submitValidation.valid) {
@@ -462,7 +984,7 @@ const CompetitionEditor: React.FC<CompetitionEditorProps> = ({onClick }) => {
                 show: true,
                 message: `You are about to submit the competition. You can still make changes until ${meetData.entriesCloseDate}.`,
                 confirmAction: () => {
-                    onClick?.();
+                    void submitCompetitionAsUpcoming();
                 },
             });
         } else {

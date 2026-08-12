@@ -59,19 +59,7 @@ export const useMeetStore = create<MeetStore>((set) => ({
   updateDistance: (distance: string) =>
     set(
       produce((state: MeetStore) => {
-
-        if(state.meetData.type !== distance){
-          if(state.meetData.type === 'lcm' && distance === 'scm'){
-            console.log("add 100IM")
-          } else if(state.meetData.type === 'scm' && distance === 'lcm'){
-            console.log("remove 100IM")
-          } else{
-            console.log("remove it all");
-          }
-
-        }
-
-
+        state.meetData.type = distance;
 
       })
     ),
@@ -83,16 +71,28 @@ export const useMeetStore = create<MeetStore>((set) => ({
         
         state.meetData.gender = gender;
         if(gender !== 'c'){
+          const normalizedType = String(state.meetData.type ?? '').toLowerCase();
+          const meetType = (normalizedType === 'scy' || normalizedType === 'scm' || normalizedType === 'lcm')
+            ? normalizedType
+            : 'scy';
+
           const remove = gender === 'w' ? 'mens' : 'womens';
           const get = gender === 'w' ? 'womens' : 'mens';
           type EventsKey = keyof typeof events;
-          const removeKey = (remove + state.meetData.type) as EventsKey;
-          const getKey = (get + state.meetData.type) as EventsKey;
-          const removeEvents = new Set(Object.keys(events[removeKey]));
+          const removeKey = (remove + meetType) as EventsKey;
+          const getKey = (get + meetType) as EventsKey;
+          const removeSource = events[removeKey];
+          const getSource = events[getKey];
+
+          if (!removeSource || !getSource) {
+            return;
+          }
+
+          const removeEvents = new Set(Object.keys(removeSource));
           // Call the helper function
 
           state.meetData.allEvents = new Map(
-          Object.keys(events[getKey]).map((eventTitle) => [eventTitle, true])
+          Object.keys(getSource).map((eventTitle) => [eventTitle, true])
           );
 
           removeEvents.forEach((eventTitle: string) => {
@@ -119,6 +119,9 @@ export const useMeetStore = create<MeetStore>((set) => ({
     set(
       produce((state: MeetStore) => {
         state.meetData.daysTitle[dayIndex] = title;
+        if (state.meetData.days[dayIndex]) {
+          state.meetData.days[dayIndex].title = title;
+        }
       })
     ),
 
