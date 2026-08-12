@@ -1,10 +1,12 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { CompetitionData } from '../models/competition.model';
-import competitionService from '../services/competition.service';
+import competitionService, { CompetitionValidationError } from '../services/competition.service';
 import { logLevels } from '../services/logger';
 import { requireAdminWithUserId, extractUserId, requireAdmin } from '../middleware/auth.middleware';
 
 const router = Router();
+
+type CompetitionListStatus = 'incomplete' | 'current' | 'upcoming' | 'completed';
 
 
 router.post('/createMeet', extractUserId('body'), requireAdmin, async (req: Request, res: Response) => {
@@ -41,6 +43,15 @@ router.post('/createMeet', extractUserId('body'), requireAdmin, async (req: Requ
         });
 
     } catch (error) {
+      if (error instanceof CompetitionValidationError) {
+        res.status(400).json({
+          success: false,
+          message: error.message,
+          error: error.message,
+        });
+        return;
+      }
+
         logLevels.error(`Failed to create competition`, { 
             userId: req.userId,
             error: error instanceof Error ? error.message : 'Unknown error'
@@ -91,6 +102,15 @@ router.put('/update', extractUserId('body'), requireAdmin, async (req: Request, 
         });
 
     } catch (error) {
+      if (error instanceof CompetitionValidationError) {
+        res.status(400).json({
+          success: false,
+          message: error.message,
+          error: error.message,
+        });
+        return;
+      }
+
         const newOrUpdated = String(req.body.comp_id ?? req.body.id ?? req.body.competitionId) === '-1' ? 'created' : 'updated';
         logLevels.error(`Failed to ${newOrUpdated} competition`, { 
             userId: req.userId,
@@ -104,6 +124,110 @@ router.put('/update', extractUserId('body'), requireAdmin, async (req: Request, 
             error: error instanceof Error ? error.message : 'Unknown error'
         });
     }
+});
+
+// POST /api/competitions/query
+// Returns competitions filtered by status/search (Admin only)
+router.post('/query', extractUserId('body'), requireAdmin, async (req: Request, res: Response) => {
+  try {
+    const rawStatuses = Array.isArray(req.body?.statuses) ? req.body.statuses : [];
+    const statuses = rawStatuses
+      .map((value: unknown) => String(value).trim().toLowerCase())
+      .filter((value: string): value is CompetitionListStatus => (
+        value === 'incomplete' || value === 'current' || value === 'upcoming' || value === 'completed'
+      ));
+    const search = String(req.body?.search ?? '').trim();
+    const page = Math.max(1, Number(req.body?.page ?? 1));
+    const pageSize = Math.max(1, Number(req.body?.pageSize ?? 10));
+
+    const rows = await competitionService.getCompetitionsByFilters({ statuses, search, page, pageSize });
+
+    res.status(200).json({
+      success: true,
+      message: 'Competitions retrieved successfully',
+      data: rows,
+    });
+  } catch (error) {
+    logLevels.error('Failed to query competitions', {
+      userId: req.userId,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      search: req.body?.search,
+      statuses: req.body?.statuses,
+    });
+
+    res.status(500).json({
+      success: false,
+      message: 'Failed to query competitions',
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
+// POST /api/competitions/queryById
+// Returns full competition payload for editor by comp_id (Admin only)
+router.post('/queryById', extractUserId('body'), requireAdmin, async (req: Request, res: Response) => {
+  try {
+    const competitionId = String(req.body?.comp_id ?? req.body?.id ?? '').trim();
+    if (!competitionId) {
+      res.status(400).json({
+        success: false,
+        message: 'Competition ID is required',
+      });
+      return;
+    }
+
+    const competition = await competitionService.getCompetitionEditorDataById(competitionId);
+    if (!competition) {
+      res.status(404).json({
+        success: false,
+        message: 'Competition not found',
+      });
+      return;
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Competition retrieved successfully',
+      data: competition,
+    });
+  } catch (error) {
+    logLevels.error('Failed to query competition by ID', {
+      userId: req.userId,
+      competitionId: req.body?.comp_id ?? req.body?.id,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+
+    res.status(500).json({
+      success: false,
+      message: 'Failed to query competition',
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
+// POST /api/competitions/active
+// Returns all active competitions (Admin only)
+router.post('/active', extractUserId('body'), requireAdmin, async (req: Request, res: Response) => {
+  try {
+    const rows = await competitionService.getActiveCompetitions();
+
+    res.status(200).json({
+      success: true,
+      message: 'Active competitions retrieved successfully',
+      data: rows,
+    });
+  } catch (error) {
+    logLevels.error('Failed to query active competitions', {
+      userId: req.userId,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+
+    res.status(500).json({
+      success: false,
+      message: 'Failed to query active competitions',
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
 });
 
 

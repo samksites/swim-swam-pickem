@@ -1,7 +1,8 @@
-DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS swimswam_user;
 
-CREATE TABLE users (
-    user_id VARCHAR(15) PRIMARY KEY,
+CREATE TABLE swimswam_user (
+    user_id SERIAL PRIMARY KEY,
+    public_user_id INT UNIQUE NOT NULL,
     username VARCHAR(30) NOT NULL UNIQUE,
     email VARCHAR(50) NOT NULL UNIQUE,
     created_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

@@ -27,33 +27,6 @@
         "Men 400m Individual Medley": true
     },
     "seedTimes": true,
-    "days": [
-            { "id": "day1", "title": "Day one", "events": [
-               {"id": "event1", "title": "Men 100m Freestyle", "swimmers": [
-                    { "id": "swimmer1", "name": "Sam Kettlewell-Sites", "time": "00:50.00" },
-                    { "id": "swimmer2", "name": "Peter Smith", "time": "00:54.80" }
-                ]},
-                {"id": "event2", "title": "Men 200m Freestyle", "swimmers": [
-                    { "id": "swimmer3", "name": "Joe bro", "time": "01:50.00" },
-                    { "id": "swimmer4", "name": "Peter Smith", "time": "01:54.40" }
-                ]}
-            ]},
-            {"id": "day2", "title": "Day two", "events": [
-               {"id": "event3", "title": "Men 100m Butterfly", "swimmers": [
-                    { "id": "swimmer5", "name": "John Doe", "time": "01:40.00" },
-                    { "id": "swimmer6", "name": "Jane Smith", "time": "00:52.30" }
-                ]},
-                {"id": "event4", "title": "Men 50m Butterfly", "swimmers": [
-                    { "id": "swimmer7", "name": "John Doe", "time": "02:00.00" },
-                    { "id": "swimmer8", "name": "Jane Smith", "time": "00:52.30" }
-                ]}
-            ]},
-            {"id": "day3", "title": "Day three", "events": [
-               {"id": "event5", "title": "Men 50m Freestyle", "swimmers": [
-                    { "id": "swimmer9", "name": "John Doe", "time": "00:50.00" },
-                    { "id": "swimmer10", "name": "Jane Smith", "time": "00:52.30" }
-                ]}
-            ]}
-               ]}
+    "days": []}
                
 

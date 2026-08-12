@@ -16,9 +16,10 @@ type DatePickerProps = {
   txt?: string;
   savedDate?: Date;
   action?: (value: string) => void;
+  minDate?: Date;
 }
 
-export function DatePicker({ txt, savedDate, action }: DatePickerProps) {
+export function DatePicker({ txt, savedDate, action, minDate }: DatePickerProps) {
   const [open, setOpen] = React.useState(false)
   const [date, setDate] = React.useState<Date | undefined>(undefined)
 
@@ -47,6 +48,7 @@ export function DatePicker({ txt, savedDate, action }: DatePickerProps) {
             mode="single"
             selected={date}
             captionLayout="dropdown"
+            disabled={minDate ? { before: minDate } : undefined}
             onSelect={(date) => {
               setDate(date)
               if (date) {

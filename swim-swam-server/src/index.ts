@@ -3,6 +3,7 @@ import cors from 'cors';
 import morganMiddleware from './middleware/morganMiddleware';
 import logger from './services/logger';
 import competitionRoutes from './routes/competition.routes';
+import adminRoutes from './routes/admin.routes';
 
 const app = express();
 
@@ -26,6 +27,9 @@ app.use(morganMiddleware); // Morgan logs into Winston
 // Mount routes
 console.log('Mounting competition routes at /api/competitions');
 app.use('/api/competitions', competitionRoutes);
+
+console.log('Mounting admin routes at /api/admin');
+app.use('/api/admin', adminRoutes);
 
 // Add a test route to verify routing works
 app.get('/test', (_req, res) => {

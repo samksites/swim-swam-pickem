@@ -30,7 +30,14 @@ const EditCompetitionCard: React.FC<EditCompetitionCardProps> = (props) => {
         statusSymbol = <HiOutlineXMark size={'25px'} style={{ color: "red"}}/>
     }
     if(props.editable){
-        editableSymbol = <FiEdit3 className="cursor-pointer" size={'22px'} style={{color: "blue"}}/>
+        editableSymbol = (
+            <FiEdit3
+                className="cursor-pointer hover:scale-105"
+                size={'22px'}
+                style={{color: "blue"}}
+                onClick={props.onEditClick}
+            />
+        );
     }
     return (
     <div className='flex flex-col'>
@@ -194,7 +201,7 @@ const Card: React.FC<CardProps> = (props) => {
     }
 
     if(props.type === 'editPage'){
-    cardElements = <EditCompetitionCard  status={props.status} dates={props.dates} editable={props.editable} />;
+    cardElements = <EditCompetitionCard  status={props.status} dates={props.dates} editable={props.editable} onEditClick={() => { if (props.id) props.onEditCompetition?.(props.id); }} />;
     } else if(props.type === 'eventPage'){
         cardClass = 'scale-70 sm:scale-100 min-h-60 h-auto w-90';
         cardElements = <EventCompetitionCard clickEvent={props.clickEvent} handleAddEvent={props.handleAddEvent} index={props.index}  status={props.status} />
@@ -203,7 +210,7 @@ const Card: React.FC<CardProps> = (props) => {
         cardClass = 'scale-70 sm:scale-100 min-h-60 h-auto w-90';
     }
     return(
-    <div className={`bg-[#FFFBF6] rounded-lg shadow-md p-2 m-4 ${cardClass}`}>
+    <div className={`bg-[#FFFBF6] rounded-lg shadow-md p-2 m-4 ${cardClass}`} data-comp-id={props.id}>
         {props.type === 'eventPage' ? (
             <div className="w-full h-2 flex justify-start items-center -mb-1">
                 <IoTrashOutline

@@ -10,10 +10,10 @@ DROP TABLE IF EXISTS CompetitionEvent;
 DROP TABLE IF EXISTS CompetitionDays;
 DROP TABLE IF EXISTS UserCompetitions;
 DROP TABLE IF EXISTS Competitions;
-DROP TABLE IF EXISTS swimSwam_user;
+DROP TABLE IF EXISTS swimswam_user;
 
 -- Users table (unchanged from your original)
-CREATE TABLE swimSwam_user (
+CREATE TABLE swimswam_user (
     user_id SERIAL PRIMARY KEY,
     public_user_id INT UNIQUE NOT NULL,
     username VARCHAR(30) NOT NULL UNIQUE,
@@ -28,7 +28,7 @@ CREATE TABLE Competitions (
     title VARCHAR(100) NOT NULL,
     created_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     entries_open TIMESTAMP NOT NULL, -- When events open for picks
-    status VARCHAR(20) DEFAULT 'upcoming' CHECK (status IN ('upcoming', 'current', 'completed')),
+    status VARCHAR(20) DEFAULT 'incomplete' CHECK (status IN ('incomplete', 'upcoming', 'current', 'completed')),
     starts_on TIMESTAMP NOT NULL,
     gender CHAR(1) CHECK (gender IN ('M', 'W', 'B')),
     meet_type VARCHAR(3) NOT NULL CHECK (meet_type IN ('SCY', 'SCM', 'LCM'))
@@ -72,7 +72,7 @@ CREATE TABLE UserCompetitions (
     comp_id INT NOT NULL,
     entry_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     total_score INT DEFAULT 0,
-    FOREIGN KEY (public_user_id) REFERENCES swimSwam_user(public_user_id) ON DELETE CASCADE,
+    FOREIGN KEY (public_user_id) REFERENCES swimswam_user(public_user_id) ON DELETE CASCADE,
     FOREIGN KEY (comp_id) REFERENCES Competitions(comp_id) ON DELETE CASCADE,
     UNIQUE(public_user_id, comp_id)
 );
@@ -142,7 +142,7 @@ SELECT
     uc.total_score,
     COUNT(p.pick_id) as total_picks
 FROM UserCompetitions uc
-JOIN swimSwam_user u ON uc.public_user_id = u.public_user_id
+JOIN swimswam_user u ON uc.public_user_id = u.public_user_id
 JOIN Competitions c ON uc.comp_id = c.comp_id
 LEFT JOIN Picks p ON uc.user_competition_id = p.user_competition_id
 GROUP BY c.comp_id, c.title, u.username, uc.total_score
