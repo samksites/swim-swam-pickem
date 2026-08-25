@@ -32,20 +32,18 @@ export const queryCompetitionInfoUsers = {
     WHERE comp_id = $1
   `,
 
-   // Get active competitions
+  // Get open and upcoming competitions for public pages, regardless of starts_on date
   getActiveCompetitions: `
     SELECT 
       comp_id,
       title,
       created_on,
-      entries_open,
       status,
       starts_on,
       gender,
       meet_type
     FROM Competitions
-    WHERE status IN ('upcoming', 'current')
-      AND starts_on >= CURRENT_DATE
+    WHERE status IN ('upcoming', 'open')
     ORDER BY starts_on ASC
   `,
 

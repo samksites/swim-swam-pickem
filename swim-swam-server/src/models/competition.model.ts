@@ -37,7 +37,7 @@ export interface CompetitionData {
   created_on?: string;
   entriesCloseDate?: string;
   entries_open?: string;
-  status: number | 'incomplete' | 'upcoming' | 'current' | 'completed';
+  status: number | 'incomplete' | 'upcoming' | 'open' | 'current' | 'completed';
   startDate?: string;
   starts_on?: string;
   gender: string;
