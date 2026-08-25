@@ -10,13 +10,13 @@ type ApiResponse<T> = {
 export type CompetitionListItem = {
   comp_id: number;
   title: string;
-  status: 'incomplete' | 'current' | 'upcoming' | 'completed';
+  status: 'incomplete' | 'upcoming' | 'open' | 'current' | 'completed';
   starts_on?: string;
   entries_open?: string;
 };
 
 export type CompetitionListFilters = {
-  statuses: Array<'incomplete' | 'current' | 'upcoming' | 'completed'>;
+  statuses: Array<'incomplete' | 'upcoming' | 'open' | 'current' | 'completed'>;
   search?: string;
   page?: number;
   pageSize?: number;
@@ -36,7 +36,7 @@ export type CompetitionEditorResponse = {
   title: string;
   entriesCloseDate?: string;
   startDate?: string;
-  status: 'incomplete' | 'current' | 'upcoming' | 'completed';
+  status: 'incomplete' | 'upcoming' | 'open' | 'current' | 'completed';
   gender: 'm' | 'w' | 'c';
   type: 'scy' | 'scm' | 'lcm';
   days: Day[];

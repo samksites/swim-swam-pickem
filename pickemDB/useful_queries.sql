@@ -65,7 +65,7 @@ SELECT
 FROM Events e
 JOIN CompetitionDays cd ON e.day_id = cd.day_id
 JOIN Competitions c ON cd.comp_id = c.comp_id
-WHERE c.status IN ('upcoming', 'active')
+WHERE c.status IN ('upcoming', 'open', 'current')
 ORDER BY c.starts_on, e.event_id;
 
 -- 7. Get statistics for each event (how many users picked each swimmer as winner)

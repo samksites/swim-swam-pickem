@@ -16,7 +16,7 @@ export class CompetitionValidationError extends Error {
   }
 }
 
-type CompetitionStatus = 'incomplete' | 'upcoming' | 'current' | 'completed';
+type CompetitionStatus = 'incomplete' | 'upcoming' | 'open' | 'current' | 'completed';
 type CompetitionGender = 'M' | 'W' | 'B';
 type MeetType = 'SCY' | 'SCM' | 'LCM';
 type CompetitionListFilters = {
@@ -93,12 +93,13 @@ const toPersistedId = (value?: string): string => {
 const mapStatus = (status: CompetitionData['status']): CompetitionStatus => {
   if (typeof status === 'number') {
     if (status <= -1) return 'incomplete';
-    if (status === 2) return 'completed';
-    if (status === 1) return 'current';
+    if (status === 3) return 'completed';
+    if (status === 2) return 'current';
+    if (status === 1) return 'open';
     return 'upcoming';
   }
 
-  if (status === 'incomplete' || status === 'upcoming' || status === 'current' || status === 'completed') {
+  if (status === 'incomplete' || status === 'upcoming' || status === 'open' || status === 'current' || status === 'completed') {
     return status;
   }
 
@@ -435,6 +436,18 @@ export class CompetitionService {
       return result.rows;
     } catch (error) {
       throw new Error(`Failed to get active competitions: ${error}`);
+    }
+  }
+
+  /**
+   * Get active competitions for public pages.
+   */
+  async getPublicActiveCompetitions() {
+    try {
+      const result = await query(queryCompetitionInfoUsers.getActiveCompetitions);
+      return result.rows;
+    } catch (error) {
+      throw new Error(`Failed to get public active competitions: ${error}`);
     }
   }
 

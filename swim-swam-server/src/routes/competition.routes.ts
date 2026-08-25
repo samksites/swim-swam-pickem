@@ -6,7 +6,31 @@ import { requireAdminWithUserId, extractUserId, requireAdmin } from '../middlewa
 
 const router = Router();
 
-type CompetitionListStatus = 'incomplete' | 'current' | 'upcoming' | 'completed';
+type CompetitionListStatus = 'incomplete' | 'upcoming' | 'open' | 'current' | 'completed';
+
+// GET /api/competitions/live
+// Returns public active competitions for the home page
+router.get('/live', async (_req: Request, res: Response) => {
+  try {
+    const rows = await competitionService.getPublicActiveCompetitions();
+
+    res.status(200).json({
+      success: true,
+      message: 'Live competitions retrieved successfully',
+      data: rows,
+    });
+  } catch (error) {
+    logLevels.error('Failed to query public live competitions', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+
+    res.status(500).json({
+      success: false,
+      message: 'Failed to query live competitions',
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
 
 
 router.post('/createMeet', extractUserId('body'), requireAdmin, async (req: Request, res: Response) => {
@@ -134,7 +158,7 @@ router.post('/query', extractUserId('body'), requireAdmin, async (req: Request, 
     const statuses = rawStatuses
       .map((value: unknown) => String(value).trim().toLowerCase())
       .filter((value: string): value is CompetitionListStatus => (
-        value === 'incomplete' || value === 'current' || value === 'upcoming' || value === 'completed'
+        value === 'incomplete' || value === 'upcoming' || value === 'open' || value === 'current' || value === 'completed'
       ));
     const search = String(req.body?.search ?? '').trim();
     const page = Math.max(1, Number(req.body?.page ?? 1));

@@ -190,11 +190,12 @@ const ManageUsersView: React.FC = () => {
     );
 };
 const PAGE_SIZE = 10;
-type CompetitionFilterStatus = 'incomplete' | 'current' | 'upcoming' | 'completed';
+type CompetitionFilterStatus = 'incomplete' | 'upcoming' | 'open' | 'current' | 'completed';
 
 const mapCompetitionStatusToCardNumber = (status: CompetitionFilterStatus): number => {
     if (status === 'incomplete') return -1;
     if (status === 'upcoming') return 0;
+    if (status === 'open') return 1;
     if (status === 'current') return 1;
     return 2;
 };
@@ -212,8 +213,9 @@ const formatDateLabel = (value?: string): string => {
 const mapCompetitionStatusToMeetStatus = (status: CompetitionFilterStatus): number => {
     if (status === 'incomplete') return -1;
     if (status === 'upcoming') return 0;
-    if (status === 'current') return 1;
-    return 2;
+    if (status === 'open') return 1;
+    if (status === 'current') return 2;
+    return 3;
 };
 
 const getEventsCatalogKey = (gender: 'm' | 'w' | 'c', type: 'scy' | 'scm' | 'lcm'): keyof typeof events => {
@@ -383,6 +385,7 @@ const CreateAndEditCompetition: React.FC = () => {
 const ViewCompetitions: React.FC<{ liveOnly?: boolean }> = ({ liveOnly = false }) => {
     const [searchText, setSearchText] = React.useState<string>('');
     const [showActiveCompetitions, setShowActiveCompetitions] = React.useState<boolean>(false);
+    const [showOpenCompetitions, setShowOpenCompetitions] = React.useState<boolean>(false);
     const [showUnfinishedCompetitions, setShowUnfinishedCompetitions] = React.useState<boolean>(true);
     const [showUpcomingCompetitions, setShowUpcomingCompetitions] = React.useState<boolean>(false);
     const [competitions, setCompetitions] = React.useState<CompetitionListItem[]>([]);
@@ -397,14 +400,15 @@ const ViewCompetitions: React.FC<{ liveOnly?: boolean }> = ({ liveOnly = false }
 
     React.useEffect(() => {
         setCurrentPage(1);
-    }, [searchText, showActiveCompetitions, showUnfinishedCompetitions, showUpcomingCompetitions]);
+    }, [searchText, showActiveCompetitions, showOpenCompetitions, showUnfinishedCompetitions, showUpcomingCompetitions]);
 
     React.useEffect(() => {
         const statuses: CompetitionFilterStatus[] = [];
         if (!liveOnly) {
             if (showUnfinishedCompetitions) statuses.push('incomplete');
-            if (showActiveCompetitions) statuses.push('current');
             if (showUpcomingCompetitions) statuses.push('upcoming');
+            if (showOpenCompetitions) statuses.push('open');
+            if (showActiveCompetitions) statuses.push('current');
         }
 
         const run = window.setTimeout(async () => {
@@ -458,7 +462,7 @@ const ViewCompetitions: React.FC<{ liveOnly?: boolean }> = ({ liveOnly = false }
         return () => {
             window.clearTimeout(run);
         };
-    }, [searchText, showActiveCompetitions, showUnfinishedCompetitions, showUpcomingCompetitions, currentPage, liveOnly]);
+    }, [searchText, showActiveCompetitions, showOpenCompetitions, showUnfinishedCompetitions, showUpcomingCompetitions, currentPage, liveOnly]);
 
     const closeEditor = () => {
         setIsEditorOpen(false);
@@ -541,6 +545,12 @@ const ViewCompetitions: React.FC<{ liveOnly?: boolean }> = ({ liveOnly = false }
                         checked={showUpcomingCompetitions}
                         onCheckedChange={setShowUpcomingCompetitions}
                         id='show-upcoming-competitions'
+                    />
+                    <SwitchLabel
+                        label='Show open competitions'
+                        checked={showOpenCompetitions}
+                        onCheckedChange={setShowOpenCompetitions}
+                        id='show-open-competitions'
                     />
                 </div>
             )}
