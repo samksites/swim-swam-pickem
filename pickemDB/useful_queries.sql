@@ -29,10 +29,10 @@ SELECT
     u.username,
     e.event_name,
     cd.day_name,
-    p.predicted_winner,
-    p.predicted_second,
-    p.predicted_third,
-    p.predicted_fourth,
+    pw.swimmer_name as predicted_winner,
+    ps.swimmer_name as predicted_second,
+    pt.swimmer_name as predicted_third,
+    pf.swimmer_name as predicted_fourth,
     s1.swimmer_name as actual_winner,
     s2.swimmer_name as actual_second,
     s3.swimmer_name as actual_third,
@@ -43,6 +43,10 @@ JOIN UserCompetitions uc ON p.user_competition_id = uc.user_competition_id
 JOIN swimswam_user u ON uc.public_user_id = u.public_user_id
 JOIN Events e ON p.event_id = e.event_id
 JOIN CompetitionDays cd ON e.day_id = cd.day_id
+LEFT JOIN Swimmers pw ON p.predicted_winner_id = pw.swimmer_id
+LEFT JOIN Swimmers ps ON p.predicted_second_id = ps.swimmer_id
+LEFT JOIN Swimmers pt ON p.predicted_third_id = pt.swimmer_id
+LEFT JOIN Swimmers pf ON p.predicted_fourth_id = pf.swimmer_id
 LEFT JOIN Swimmers s1 ON e.event_id = s1.event_id AND s1.place_finish = 1
 LEFT JOIN Swimmers s2 ON e.event_id = s2.event_id AND s2.place_finish = 2
 LEFT JOIN Swimmers s3 ON e.event_id = s3.event_id AND s3.place_finish = 3
@@ -71,13 +75,14 @@ ORDER BY c.starts_on, e.event_id;
 -- 7. Get statistics for each event (how many users picked each swimmer as winner)
 SELECT 
     e.event_name,
-    p.predicted_winner,
+    s.swimmer_name as predicted_winner,
     COUNT(*) as pick_count,
     ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM Picks p2 WHERE p2.event_id = e.event_id), 2) as pick_percentage
 FROM Picks p
 JOIN Events e ON p.event_id = e.event_id
+JOIN Swimmers s ON p.predicted_winner_id = s.swimmer_id
 WHERE e.event_id = 1
-GROUP BY e.event_name, p.predicted_winner
+GROUP BY e.event_name, s.swimmer_name
 ORDER BY pick_count DESC;
 
 -- 8. Get events by day with swimmer counts
@@ -98,10 +103,10 @@ ORDER BY cd.day_id, e.event_id;
 SELECT 
     e.event_name,
     COUNT(*) as total_picks,
-    SUM(CASE WHEN p.predicted_winner = s1.swimmer_name THEN 1 ELSE 0 END) as correct_winner_picks,
-    SUM(CASE WHEN p.predicted_second = s2.swimmer_name THEN 1 ELSE 0 END) as correct_second_picks,
-    SUM(CASE WHEN p.predicted_third = s3.swimmer_name THEN 1 ELSE 0 END) as correct_third_picks,
-    SUM(CASE WHEN p.predicted_fourth = s4.swimmer_name THEN 1 ELSE 0 END) as correct_fourth_picks,
+    SUM(CASE WHEN p.predicted_winner_id = s1.swimmer_id THEN 1 ELSE 0 END) as correct_winner_picks,
+    SUM(CASE WHEN p.predicted_second_id = s2.swimmer_id THEN 1 ELSE 0 END) as correct_second_picks,
+    SUM(CASE WHEN p.predicted_third_id = s3.swimmer_id THEN 1 ELSE 0 END) as correct_third_picks,
+    SUM(CASE WHEN p.predicted_fourth_id = s4.swimmer_id THEN 1 ELSE 0 END) as correct_fourth_picks,
     ROUND(AVG(p.points_earned), 2) as avg_points_per_pick
 FROM Picks p
 JOIN Events e ON p.event_id = e.event_id

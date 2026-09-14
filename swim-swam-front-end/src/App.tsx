@@ -2,6 +2,7 @@ import './App.css'
 import CreateAndEditCompetition from './pages/CreateAndEditCompetition'
 import {Alert} from './components/ui/alert'
 import HomePage from './pages/homePage'
+import EnterCompetition from './pages/EnterCompetition'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 
 function App() {
@@ -11,6 +12,7 @@ function App() {
       <Alert/>
       <Routes>
         <Route path='/' element={<HomePage />} />
+        <Route path='/enterCompetition' element={<EnterCompetition />} />
         <Route path='/adminPage' element={<CreateAndEditCompetition />} />
         <Route path='*' element={<Navigate to='/' replace />} />
       </Routes>
