@@ -34,6 +34,27 @@ type CompetitionListResult = {
   totalPages: number;
 };
 
+type UserEventPickInput = {
+  eventId: number;
+  predictedWinnerId: number | null;
+  predictedSecondId: number | null;
+  predictedThirdId: number | null;
+  predictedFourthId: number | null;
+};
+
+type SaveUserPicksResult = {
+  userCompetitionId: number;
+  savedCount: number;
+};
+
+type StoredUserEventPickRow = {
+  event_id: number;
+  predicted_winner_id: number | null;
+  predicted_second_id: number | null;
+  predicted_third_id: number | null;
+  predicted_fourth_id: number | null;
+};
+
 interface PersistedSwimmer {
   swimmer_id: string;
   swimmer_name: string;
@@ -448,6 +469,138 @@ export class CompetitionService {
       return result.rows;
     } catch (error) {
       throw new Error(`Failed to get public active competitions: ${error}`);
+    }
+  }
+
+  /**
+   * Get saved picks for one user in one competition using swimmer IDs.
+   */
+  async getUserCompetitionPicks(publicUserId: number, competitionId: number): Promise<UserEventPickInput[]> {
+    try {
+      if (!Number.isInteger(publicUserId) || publicUserId <= 0) {
+        throw new CompetitionValidationError('publicUserId must be a positive integer.');
+      }
+
+      if (!Number.isInteger(competitionId) || competitionId <= 0) {
+        throw new CompetitionValidationError('competitionId must be a positive integer.');
+      }
+
+      const result = await query(competitionQueries.getUserPicksByCompetition, [competitionId, publicUserId]);
+      const rows = result.rows as StoredUserEventPickRow[];
+
+      return rows.map((row) => ({
+        eventId: Number(row.event_id),
+        predictedWinnerId: row.predicted_winner_id == null ? null : Number(row.predicted_winner_id),
+        predictedSecondId: row.predicted_second_id == null ? null : Number(row.predicted_second_id),
+        predictedThirdId: row.predicted_third_id == null ? null : Number(row.predicted_third_id),
+        predictedFourthId: row.predicted_fourth_id == null ? null : Number(row.predicted_fourth_id),
+      }));
+    } catch (error) {
+      if (error instanceof CompetitionValidationError) {
+        throw error;
+      }
+
+      throw new Error(`Failed to get user competition picks: ${error}`);
+    }
+  }
+
+  /**
+   * Save or update all picks for one user in one competition using swimmer IDs.
+   */
+  async saveUserCompetitionPicks(
+    publicUserId: number,
+    competitionId: number,
+    picks: UserEventPickInput[],
+  ): Promise<SaveUserPicksResult> {
+    const client = await getClient();
+
+    try {
+      if (!Number.isInteger(publicUserId) || publicUserId <= 0) {
+        throw new CompetitionValidationError('publicUserId must be a positive integer.');
+      }
+
+      if (!Number.isInteger(competitionId) || competitionId <= 0) {
+        throw new CompetitionValidationError('competitionId must be a positive integer.');
+      }
+
+      if (!Array.isArray(picks) || picks.length === 0) {
+        throw new CompetitionValidationError('At least one pick is required.');
+      }
+
+      await client.query('BEGIN');
+
+      const competitionResult = await client.query(queryCompetitionInfoUsers.getCompetitionById, [competitionId]);
+      if (competitionResult.rows.length === 0) {
+        throw new CompetitionValidationError('Competition not found.');
+      }
+
+      const userCompetitionResult = await client.query(competitionQueries.upsertUserCompetitionEntry, [
+        publicUserId,
+        competitionId,
+      ]);
+
+      const userCompetitionId = Number(userCompetitionResult.rows[0]?.user_competition_id ?? 0);
+      if (!Number.isInteger(userCompetitionId) || userCompetitionId <= 0) {
+        throw new Error('Failed to resolve user competition entry.');
+      }
+
+      for (const pick of picks) {
+        const eventId = Number(pick.eventId);
+        const winnerId = pick.predictedWinnerId == null ? null : Number(pick.predictedWinnerId);
+        const secondId = pick.predictedSecondId == null ? null : Number(pick.predictedSecondId);
+        const thirdId = pick.predictedThirdId == null ? null : Number(pick.predictedThirdId);
+        const fourthId = pick.predictedFourthId == null ? null : Number(pick.predictedFourthId);
+
+        const ids = [winnerId, secondId, thirdId, fourthId];
+        const providedIds = ids.filter((id): id is number => id != null);
+        const allProvidedIdsValid = providedIds.every((id) => Number.isInteger(id) && id > 0);
+        if (!Number.isInteger(eventId) || eventId <= 0 || !allProvidedIdsValid) {
+          throw new CompetitionValidationError('Each pick must include a valid eventId and optional valid swimmer IDs.');
+        }
+
+        if (new Set(providedIds).size !== providedIds.length) {
+          throw new CompetitionValidationError(`Each event pick must use unique swimmers (event ${eventId}).`);
+        }
+
+        const eventResult = await client.query(competitionQueries.getEventCompetitionCount, [eventId, competitionId]);
+        const eventCount = Number(eventResult.rows[0]?.event_count ?? 0);
+        if (eventCount !== 1) {
+          throw new CompetitionValidationError(`Event ${eventId} does not belong to competition ${competitionId}.`);
+        }
+
+        if (providedIds.length > 0) {
+          const swimmerResult = await client.query(competitionQueries.getEventSwimmerIdCount, [eventId, providedIds]);
+          const swimmerCount = Number(swimmerResult.rows[0]?.swimmer_count ?? 0);
+          if (swimmerCount !== providedIds.length) {
+            throw new CompetitionValidationError(`One or more swimmer IDs are invalid for event ${eventId}.`);
+          }
+        }
+
+        await client.query(competitionQueries.upsertPickBySwimmerIds, [
+          userCompetitionId,
+          eventId,
+          winnerId,
+          secondId,
+          thirdId,
+          fourthId,
+        ]);
+      }
+
+      await client.query('COMMIT');
+      return {
+        userCompetitionId,
+        savedCount: picks.length,
+      };
+    } catch (error) {
+      await client.query('ROLLBACK');
+
+      if (error instanceof CompetitionValidationError) {
+        throw error;
+      }
+
+      throw new Error(`Failed to save user competition picks: ${error}`);
+    } finally {
+      client.release();
     }
   }
 

@@ -196,6 +196,59 @@ export const competitionQueries = {
       place_finish = EXCLUDED.place_finish;
   `,
 
+  upsertUserCompetitionEntry: `
+    INSERT INTO UserCompetitions (public_user_id, comp_id, entry_date)
+    VALUES ($1, $2, CURRENT_TIMESTAMP)
+    ON CONFLICT (public_user_id, comp_id) DO UPDATE SET
+      entry_date = CURRENT_TIMESTAMP
+    RETURNING user_competition_id;
+  `,
+
+  upsertPickBySwimmerIds: `
+    INSERT INTO Picks (
+      user_competition_id,
+      event_id,
+      predicted_winner_id,
+      predicted_second_id,
+      predicted_third_id,
+      predicted_fourth_id
+    )
+    VALUES ($1, $2, $3, $4, $5, $6)
+    ON CONFLICT (user_competition_id, event_id) DO UPDATE SET
+      predicted_winner_id = EXCLUDED.predicted_winner_id,
+      predicted_second_id = EXCLUDED.predicted_second_id,
+      predicted_third_id = EXCLUDED.predicted_third_id,
+      predicted_fourth_id = EXCLUDED.predicted_fourth_id;
+  `,
+
+  getEventCompetitionCount: `
+    SELECT COUNT(*)::int AS event_count
+    FROM CompetitionEvent e
+    JOIN CompetitionDays d ON e.day_id = d.day_id
+    WHERE e.event_id = $1 AND d.comp_id = $2;
+  `,
+
+  getEventSwimmerIdCount: `
+    SELECT COUNT(*)::int AS swimmer_count
+    FROM Swimmers
+    WHERE event_id = $1
+      AND swimmer_id = ANY($2::int[]);
+  `,
+
+  getUserPicksByCompetition: `
+    SELECT
+      p.event_id,
+      p.predicted_winner_id,
+      p.predicted_second_id,
+      p.predicted_third_id,
+      p.predicted_fourth_id
+    FROM Picks p
+    JOIN UserCompetitions uc ON p.user_competition_id = uc.user_competition_id
+    WHERE uc.comp_id = $1
+      AND uc.public_user_id = $2
+    ORDER BY p.event_id ASC;
+  `,
+
   deleteMissingSwimmersForCompetition: `
     DELETE FROM Swimmers s
     USING CompetitionEvent e, CompetitionDays d

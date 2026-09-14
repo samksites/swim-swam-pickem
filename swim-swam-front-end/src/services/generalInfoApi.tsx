@@ -12,6 +12,55 @@ export type LiveCompetitionListItem = {
   starts_on?: string;
 };
 
+export type EntryCompetitionSwimmer = {
+  id: string;
+  name: string;
+  time: string;
+  placeFinish: number | null;
+};
+
+export type EntryCompetitionEvent = {
+  id: string;
+  title: string;
+  eventOrder: number;
+  swimmers: EntryCompetitionSwimmer[];
+};
+
+export type EntryCompetitionDay = {
+  id: string;
+  title: string;
+  dayOrder: number;
+  events: EntryCompetitionEvent[];
+};
+
+export type EntryCompetitionData = {
+  id: string;
+  title: string;
+  startDate: string;
+  days: EntryCompetitionDay[];
+};
+
+export type CompetitionPickInput = {
+  eventId: string;
+  predictedWinnerId: string | null;
+  predictedSecondId: string | null;
+  predictedThirdId: string | null;
+  predictedFourthId: string | null;
+};
+
+export type SaveCompetitionPicksResult = {
+  userCompetitionId: number;
+  savedCount: number;
+};
+
+export type SavedCompetitionPick = {
+  eventId: number;
+  predictedWinnerId: number | null;
+  predictedSecondId: number | null;
+  predictedThirdId: number | null;
+  predictedFourthId: number | null;
+};
+
 const API_BASE_URL = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, '') || '';
 const COMPETITIONS_API_URL = `${API_BASE_URL}/api/competitions`;
 
@@ -45,6 +94,53 @@ export const generalInfoApi = {
     });
 
     const payload = await parseApiResponse<LiveCompetitionListItem[]>(response);
+    return payload.data;
+  },
+
+  getCompetitionForEntry: async (competitionId: string): Promise<EntryCompetitionData> => {
+    const response = await fetch(`${COMPETITIONS_API_URL}/public/${competitionId}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    const payload = await parseApiResponse<EntryCompetitionData>(response);
+    return payload.data;
+  },
+
+  saveCompetitionPicks: async (
+    competitionId: string,
+    publicUserId: string,
+    picks: CompetitionPickInput[],
+  ): Promise<SaveCompetitionPicksResult> => {
+    const response = await fetch(`${COMPETITIONS_API_URL}/public/${competitionId}/picks`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        publicUserId,
+        picks,
+      }),
+    });
+
+    const payload = await parseApiResponse<SaveCompetitionPicksResult>(response);
+    return payload.data;
+  },
+
+  getSavedCompetitionPicks: async (
+    competitionId: string,
+    publicUserId: string,
+  ): Promise<SavedCompetitionPick[]> => {
+    const response = await fetch(`${COMPETITIONS_API_URL}/public/${competitionId}/picks/${publicUserId}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    const payload = await parseApiResponse<SavedCompetitionPick[]>(response);
     return payload.data;
   },
 };
