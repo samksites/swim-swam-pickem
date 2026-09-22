@@ -6,5 +6,7 @@ CREATE TABLE swimswam_user (
     username VARCHAR(30) NOT NULL UNIQUE,
     email VARCHAR(50) NOT NULL UNIQUE,
     created_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    admin BOOLEAN DEFAULT FALSE
+    admin BOOLEAN DEFAULT FALSE,
+    google_sub VARCHAR(255) UNIQUE,
+    hashed_password VARCHAR(255)
 );
