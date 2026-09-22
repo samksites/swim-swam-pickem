@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import adminService from '../services/admin.service';
 import { logLevels } from '../services/logger';
+import { getSessionUser } from '../services/auth.service';
 
 // Extend Express Request interface to include userId
 declare global {
@@ -18,18 +19,22 @@ declare global {
  */
 export const extractUserId = (source: 'header' | 'param' | 'body' = 'header') => {
   return (req: Request, res: Response, next: NextFunction): void => {
-    let userId: string | undefined;
-    // Extract userId based on source
-    switch (source) {
-      case 'header':
-        userId = req.headers['userId'] as string;
-        break;
-      case 'param':
-        userId = req.params['userId'] || req.params.userId;
-        break;
-      case 'body':
-        userId = req.body.userId;
-        break;
+    const sessionUser = getSessionUser(req.headers.cookie);
+    let userId: string | undefined = sessionUser?.publicUserId;
+
+    if (!userId) {
+      // Keep supporting the existing explicit user ID sources for non-session callers.
+      switch (source) {
+        case 'header':
+          userId = req.headers['userId'] as string;
+          break;
+        case 'param':
+          userId = req.params['userId'] || req.params.userId;
+          break;
+        case 'body':
+          userId = req.body.userId;
+          break;
+      }
     }
 
     if (!userId) {

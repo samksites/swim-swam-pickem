@@ -1,8 +1,9 @@
-import Hamburger from '@/components/ui/hamburger';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
+import HamburgerMenu from '@/components/ui/hamburgerMenu';
 import { useNavigate } from 'react-router-dom';
 import { generalInfoApi, type LiveCompetitionListItem } from '@/services/generalInfoApi';
+import { authApi, type AuthUser } from '@/services/authApi';
+import ActivityTracker from '@/components/ActivityTracker';
 import React from 'react';
 
 const formatDateLabel = (value?: string): string => {
@@ -59,15 +60,25 @@ const HomePage: React.FC = () => {
   const navigate = useNavigate();
   const [liveCompetitions, setLiveCompetitions] = React.useState<LiveCompetitionListItem[]>([]);
   const [loadError, setLoadError] = React.useState<string>('');
-
-  // Placeholder for future auth wiring. For now all users are treated as logged out.
-  const isLoggedIn = false;
+  const [currentUser, setCurrentUser] = React.useState<AuthUser | null>(null);
+  const [isAuthLoading, setIsAuthLoading] = React.useState(true);
 
   React.useEffect(() => {
-    if (isLoggedIn) {
-      return;
-    }
+    const run = async () => {
+      try {
+        const user = await authApi.getCurrentUser();
+        setCurrentUser(user);
+      } catch {
+        setCurrentUser(null);
+      } finally {
+        setIsAuthLoading(false);
+      }
+    };
 
+    void run();
+  }, []);
+
+  React.useEffect(() => {
     const run = async () => {
       try {
         const comps = await generalInfoApi.getLiveCompetitions();
@@ -81,40 +92,54 @@ const HomePage: React.FC = () => {
     };
 
     void run();
-  }, [isLoggedIn]);
+  }, []);
+
+  const handleSignOut = async () => {
+    try {
+      await authApi.signOut();
+      setCurrentUser(null);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to sign out';
+      setLoadError(message);
+    }
+  };
 
   const openCompetitions = liveCompetitions.filter((competition) => competition.status === 'open');
   const upcomingCompetitions = liveCompetitions.filter((competition) => competition.status === 'upcoming');
 
   return (
     <div className='relative min-h-screen w-full bg-slate-950 text-white'>
-      <div className='absolute top-6 right-6'>
-        <Popover>
-          <PopoverTrigger asChild>
-            <div>
-              <Hamburger />
-            </div>
-          </PopoverTrigger>
-          <PopoverContent align='end' className='w-56 bg-slate-900 border-slate-700 p-2'>
-            <div className='flex flex-col gap-1'>
-              <Button type='button' variant='ghost' className='justify-start text-white hover:bg-slate-800 cursor-pointer'>
-                Search competition
-              </Button>
-              <Button type='button' variant='ghost' className='justify-start text-white hover:bg-slate-800 cursor-pointer'>
-                User settings
-              </Button>
-              <Button
-                type='button'
-                variant='ghost'
-                className='justify-start text-white hover:bg-slate-800 cursor-pointer'
-                onClick={() => navigate('/adminPage')}
-              >
-                Admin seetings
-              </Button>
-            </div>
-          </PopoverContent>
-        </Popover>
-      </div>
+      <ActivityTracker onSessionExpired={() => setCurrentUser(null)} />
+      <HamburgerMenu>
+        {isAuthLoading ? null : currentUser ? (
+          <>
+            <div className='px-3 py-2 text-sm text-slate-300 truncate'>{currentUser.email}</div>
+            <Button type='button' variant='ghost' className='justify-start text-white hover:bg-slate-800 cursor-pointer' onClick={() => void handleSignOut()}>
+              Sign out
+            </Button>
+          </>
+        ) : (
+          <Button type='button' variant='ghost' className='justify-start text-white hover:bg-slate-800 cursor-pointer' onClick={() => navigate('/sign-in')}>
+            Sign in
+          </Button>
+        )}
+        <Button type='button' variant='ghost' className='justify-start text-white hover:bg-slate-800 cursor-pointer'>
+          Search competition
+        </Button>
+        <Button type='button' variant='ghost' className='justify-start text-white hover:bg-slate-800 cursor-pointer'>
+          User settings
+        </Button>
+        {currentUser?.isAdmin ? (
+          <Button
+            type='button'
+            variant='ghost'
+            className='justify-start text-white hover:bg-slate-800 cursor-pointer'
+            onClick={() => navigate('/adminPage')}
+          >
+            Admin seetings
+          </Button>
+        ) : null}
+      </HamburgerMenu>
 
       <div className='w-full pt-8 text-center px-6'>
         <h1 className='text-4xl font-semibold'>Swim Swam Pickem</h1>

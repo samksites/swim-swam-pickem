@@ -1,6 +1,6 @@
-import Hamburger from '@/components/ui/hamburger';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
+import HamburgerMenu from '@/components/ui/hamburgerMenu';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandItem, CommandList } from '@/components/ui/command';
 import { IoTrashOutline } from 'react-icons/io5';
 import { LuGrid2X2, LuGrid3X3 } from 'react-icons/lu';
@@ -15,6 +15,8 @@ import {
 } from '@/services/generalInfoApi';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import ActivityTracker from '@/components/ActivityTracker';
+import { authApi, type AuthUser } from '@/services/authApi';
 
 const REQUIRED_SWIMMER_PICKS = 4;
 type CompletionState = 'none' | 'partial' | 'complete';
@@ -82,6 +84,19 @@ const EnterCompetition: React.FC = () => {
 	const [isSaving, setIsSaving] = React.useState<boolean>(false);
 	const [isSaveSuccessFading, setIsSaveSuccessFading] = React.useState<boolean>(false);
 	const initialEventPicksRef = React.useRef<Record<string, string[]>>({});
+	const [currentUser, setCurrentUser] = React.useState<AuthUser | null>(null);
+
+	React.useEffect(() => {
+		const run = async () => {
+			try {
+				setCurrentUser(await authApi.getCurrentUser());
+			} catch {
+				setCurrentUser(null);
+			}
+		};
+
+		void run();
+	}, []);
 
 	// TODO: Replace with selected competition ID from app state/router params.
 	const selectedCompetitionId = '1';
@@ -382,35 +397,27 @@ const EnterCompetition: React.FC = () => {
 
 	return (
 		<div className='relative min-h-screen w-full bg-slate-950 text-white'>
-			<div className='absolute top-6 right-6'>
-				<Popover>
-					<PopoverTrigger asChild>
-						<div>
-							<Hamburger />
-						</div>
-					</PopoverTrigger>
-					<PopoverContent align='end' className='w-56 bg-slate-900 border-slate-700 p-2'>
-						<div className='flex flex-col gap-1'>
-							<Button
-								type='button'
-								variant='ghost'
-								className='justify-start text-white hover:bg-slate-800 cursor-pointer'
-								onClick={() => navigate('/')}
-							>
-								Home
-							</Button>
-							<Button
-								type='button'
-								variant='ghost'
-								className='justify-start text-white hover:bg-slate-800 cursor-pointer'
-								onClick={() => navigate('/adminPage')}
-							>
-								Admin seetings
-							</Button>
-						</div>
-					</PopoverContent>
-				</Popover>
-			</div>
+			<ActivityTracker />
+			<HamburgerMenu>
+				<Button
+					type='button'
+					variant='ghost'
+					className='justify-start text-white hover:bg-slate-800 cursor-pointer'
+					onClick={() => navigate('/')}
+				>
+					Home
+				</Button>
+				{currentUser?.isAdmin ? (
+					<Button
+						type='button'
+						variant='ghost'
+						className='justify-start text-white hover:bg-slate-800 cursor-pointer'
+						onClick={() => navigate('/adminPage')}
+					>
+						Admin seetings
+					</Button>
+				) : null}
+			</HamburgerMenu>
 
 			<div className='w-full pt-8 text-center px-6'>
 				<h1 className='text-4xl font-semibold'>{competition?.title ?? 'Enter competition picks'}</h1>

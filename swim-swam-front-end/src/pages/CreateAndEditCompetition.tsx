@@ -29,6 +29,9 @@ import meetJson from "../data/templateMeet.json";
 import { meetApi } from '@/services/meetApi';
 import type { AdminUserListItem, CompetitionEditorResponse, CompetitionListItem } from '@/services/meetApi';
 import events from '@/data/events.json';
+import ActivityTracker from '@/components/ActivityTracker';
+import HamburgerMenu from '@/components/ui/hamburgerMenu';
+import { useNavigate } from 'react-router-dom';
 
 const ADMIN_USER_ID = (import.meta.env.VITE_ADMIN_USER_ID as string | undefined)?.trim() ?? "";
 
@@ -336,6 +339,7 @@ const formatDateOnly = (value: Date): string => {
  * @returns primary content of the page
  */
 const CreateAndEditCompetition: React.FC = () => {
+    const navigate = useNavigate();
     const [activeTab, setActiveTab] = React.useState<number>(0);
 
     // This function is used to change the active tab when a tab is clicked
@@ -359,6 +363,17 @@ const CreateAndEditCompetition: React.FC = () => {
 
     return (
         <div className='Flex flex-col w-full h-full'>
+            <ActivityTracker />
+            <HamburgerMenu>
+                <Button
+                    type='button'
+                    variant='ghost'
+                    className='justify-start text-white hover:bg-slate-800 cursor-pointer'
+                    onClick={() => navigate('/')}
+                >
+                    Home
+                </Button>
+            </HamburgerMenu>
 
             <div className='flex flex-row justify-center items-center w-full mt-4 mb-4'>
                 <Tabs defaultValue="editComps" className="w-[400px] justify-center items-center">

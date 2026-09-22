@@ -4,6 +4,7 @@ import morganMiddleware from './middleware/morganMiddleware';
 import logger from './services/logger';
 import competitionRoutes from './routes/competition.routes';
 import adminRoutes from './routes/admin.routes';
+import authRoutes from './routes/auth.routes';
 
 const app = express();
 
@@ -19,7 +20,7 @@ app.use(
       'http://127.0.0.1:5173',
     ],
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    credentials: false,
+    credentials: true,
   })
 );
 app.use(morganMiddleware); // Morgan logs into Winston
@@ -30,6 +31,7 @@ app.use('/api/competitions', competitionRoutes);
 
 console.log('Mounting admin routes at /api/admin');
 app.use('/api/admin', adminRoutes);
+app.use('/api/auth', authRoutes);
 
 // Add a test route to verify routing works
 app.get('/test', (_req, res) => {
