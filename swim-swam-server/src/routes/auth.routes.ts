@@ -3,15 +3,18 @@ import {
   authenticateGoogleCredential,
   clearSessionCookie,
   clearSignedInSession,
+  createSessionToken,
   getSessionCookieValue,
   getSessionUser,
   getUserBySessionId,
   updateSignedInSessionActivity,
+  updateUsername,
   sessionCookie,
   signUpWithPassword,
   signInWithPassword,
   SignUpError,
   SignInError,
+  UpdateUsernameError,
 } from '../services/auth.service';
 
 const router = Router();
@@ -101,6 +104,38 @@ router.post('/activity', async (req: Request, res: Response) => {
   }
 
   res.status(200).json({ success: true, message: 'Activity updated', data: null });
+});
+
+router.patch('/username', async (req: Request, res: Response) => {
+  const newUsername = typeof req.body?.username === 'string' ? req.body.username.trim() : '';
+  if (!newUsername) {
+    res.status(400).json({ success: false, message: 'Username is required' });
+    return;
+  }
+
+  const tokenUser = getSessionUser(req.headers.cookie);
+  const cookieValue = getSessionCookieValue(req.headers.cookie);
+  const sessionUser = !tokenUser && cookieValue ? await getUserBySessionId(cookieValue) : null;
+  const currentUser = tokenUser ?? sessionUser;
+
+  if (!currentUser) {
+    res.status(401).json({ success: false, message: 'You must be signed in to update your username' });
+    return;
+  }
+
+  try {
+    const updatedUser = await updateUsername(currentUser.username, newUsername);
+    if (tokenUser) {
+      res.setHeader('Set-Cookie', sessionCookie(createSessionToken(updatedUser)));
+    }
+    res.status(200).json({ success: true, message: 'Username updated successfully', data: updatedUser });
+  } catch (error) {
+    const status = error instanceof UpdateUsernameError ? 409 : 500;
+    res.status(status).json({
+      success: false,
+      message: error instanceof Error ? error.message : 'Failed to update username',
+    });
+  }
 });
 
 router.post('/logout', async (req: Request, res: Response) => {

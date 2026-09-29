@@ -210,7 +210,7 @@ const Card: React.FC<CardProps> = (props) => {
         cardClass = 'scale-70 sm:scale-100 min-h-60 h-auto w-90';
     }
     return(
-    <div className={`bg-[#FFFBF6] rounded-lg shadow-md p-2 m-4 ${cardClass}`} data-comp-id={props.id}>
+    <div className={`rounded-md border border-slate-700 bg-slate-900 text-white shadow-md p-2 m-4 ${cardClass}`} data-comp-id={props.id}>
         {props.type === 'eventPage' ? (
             <div className="w-full h-2 flex justify-start items-center -mb-1">
                 <IoTrashOutline

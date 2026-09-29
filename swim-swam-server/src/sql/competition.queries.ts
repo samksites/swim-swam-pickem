@@ -249,6 +249,19 @@ export const competitionQueries = {
     ORDER BY p.event_id ASC;
   `,
 
+  getCompetitionsEnteredByUser: `
+    SELECT
+      c.comp_id,
+      c.title,
+      c.status,
+      c.starts_on,
+      uc.entry_date
+    FROM UserCompetitions uc
+    JOIN Competitions c ON c.comp_id = uc.comp_id
+    WHERE uc.public_user_id = $1
+    ORDER BY c.starts_on DESC;
+  `,
+
   deleteMissingSwimmersForCompetition: `
     DELETE FROM Swimmers s
     USING CompetitionEvent e, CompetitionDays d

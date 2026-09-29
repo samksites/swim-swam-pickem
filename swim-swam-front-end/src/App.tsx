@@ -6,6 +6,7 @@ import EnterCompetition from './pages/EnterCompetition'
 import SignIn from './pages/SignIn'
 import SignUp from './pages/SignUp'
 import SignInWithPassword from './pages/SignInWithPassword'
+import UserSettings from './pages/UserSettings'
 import InactivityManager from './components/InactivityManager'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 
@@ -21,6 +22,7 @@ function App() {
         <Route path='/sign-in' element={<SignIn />} />
         <Route path='/sign-in/password' element={<SignInWithPassword />} />
         <Route path='/sign-up' element={<SignUp />} />
+        <Route path='/user-settings' element={<UserSettings />} />
         <Route path='/adminPage' element={<CreateAndEditCompetition />} />
         <Route path='*' element={<Navigate to='/' replace />} />
       </Routes>

@@ -157,6 +157,42 @@ router.get('/public/:id/picks/:publicUserId', async (req: Request, res: Response
   }
 });
 
+// GET /api/competitions/public/user/:publicUserId/entered
+// Returns all competitions a user has entered.
+router.get('/public/user/:publicUserId/entered', async (req: Request, res: Response) => {
+  try {
+    const publicUserId = Number(String(req.params.publicUserId ?? '').trim());
+
+    if (!Number.isInteger(publicUserId) || publicUserId <= 0) {
+      res.status(400).json({
+        success: false,
+        message: 'Valid publicUserId is required',
+      });
+      return;
+    }
+
+    const rows = await competitionService.getCompetitionsEnteredByUser(publicUserId);
+    res.status(200).json({
+      success: true,
+      message: 'Entered competitions retrieved successfully',
+      data: rows,
+    });
+  } catch (error) {
+    const isValidation = error instanceof CompetitionValidationError;
+
+    logLevels.error('Failed to load entered competitions', {
+      publicUserId: req.params.publicUserId,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+
+    res.status(isValidation ? 400 : 500).json({
+      success: false,
+      message: isValidation ? (error as Error).message : 'Failed to load entered competitions',
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
 router.post('/public/:id/picks', async (req: Request, res: Response) => {
   try {
     const competitionIdRaw = String(req.params.id ?? '').trim();

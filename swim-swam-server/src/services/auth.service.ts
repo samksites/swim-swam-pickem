@@ -1,7 +1,13 @@
 import crypto from 'crypto';
 import bcrypt from 'bcrypt';
 import { OAuth2Client } from 'google-auth-library';
+import { RegExpMatcher, englishDataset, englishRecommendedTransformers } from 'obscenity';
 import { query } from './dbService';
+
+const profanityMatcher = new RegExpMatcher({
+  ...englishDataset.build(),
+  ...englishRecommendedTransformers,
+});
 
 type GoogleProfile = {
   googleSub: string;
@@ -31,10 +37,18 @@ export class SignInError extends Error {
   }
 }
 
+export class UpdateUsernameError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'UpdateUsernameError';
+  }
+}
+
 export type AuthUser = {
   publicUserId: string;
   username: string;
   email: string;
+  createdOn: string;
   isAdmin: boolean;
 };
 
@@ -56,7 +70,7 @@ const sign = (value: string): string => crypto
   .update(value)
   .digest('base64url');
 
-const createSessionToken = (user: AuthUser): string => {
+export const createSessionToken = (user: AuthUser): string => {
   const payload: SessionPayload = {
     ...user,
     expiresAt: Date.now() + SESSION_TTL_SECONDS * 1000,
@@ -88,6 +102,7 @@ const verifySessionToken = (token: string): AuthUser | null => {
       publicUserId: payload.publicUserId,
       username: payload.username,
       email: payload.email,
+      createdOn: payload.createdOn,
       isAdmin: payload.isAdmin,
     };
   } catch {
@@ -103,7 +118,7 @@ const createUsername = (profile: GoogleProfile): string => {
 
 const getOrCreateUser = async (profile: GoogleProfile): Promise<AuthUser> => {
   const existing = await query(
-    'SELECT public_user_id, username, email, admin FROM swimswam_user WHERE google_sub = $1',
+    'SELECT public_user_id, username, email, created_on, admin FROM swimswam_user WHERE google_sub = $1',
     [profile.googleSub],
   );
   const existingUser = existing.rows[0];
@@ -112,6 +127,7 @@ const getOrCreateUser = async (profile: GoogleProfile): Promise<AuthUser> => {
       publicUserId: String(existingUser.public_user_id),
       username: String(existingUser.username),
       email: String(existingUser.email),
+      createdOn: new Date(existingUser.created_on).toISOString(),
       isAdmin: Boolean(existingUser.admin),
     };
   }
@@ -121,7 +137,7 @@ const getOrCreateUser = async (profile: GoogleProfile): Promise<AuthUser> => {
     `INSERT INTO swimswam_user (public_user_id, username, email, admin, google_sub)
      SELECT COALESCE(MAX(public_user_id), 1000) + 1, $1, $2, false, $3
      FROM swimswam_user
-     RETURNING public_user_id, username, email, admin`,
+    RETURNING public_user_id, username, email, created_on, admin`,
     [username, profile.email, profile.googleSub],
   );
   const createdUser = created.rows[0];
@@ -129,6 +145,7 @@ const getOrCreateUser = async (profile: GoogleProfile): Promise<AuthUser> => {
     publicUserId: String(createdUser.public_user_id),
     username: String(createdUser.username),
     email: String(createdUser.email),
+    createdOn: new Date(createdUser.created_on).toISOString(),
     isAdmin: Boolean(createdUser.admin),
   };
 };
@@ -149,7 +166,7 @@ export const signUpWithPassword = async (profile: SignUpProfile): Promise<{ user
     `INSERT INTO swimswam_user (public_user_id, username, email, admin, hashed_password)
      SELECT COALESCE(MAX(public_user_id), 1000) + 1, $1, $2, false, $3
      FROM swimswam_user
-     RETURNING public_user_id, username, email, admin`,
+    RETURNING public_user_id, username, email, created_on, admin`,
     [profile.username, profile.email, hashedPassword],
   );
   const createdUser = created.rows[0];
@@ -157,6 +174,7 @@ export const signUpWithPassword = async (profile: SignUpProfile): Promise<{ user
     publicUserId: String(createdUser.public_user_id),
     username: String(createdUser.username),
     email: String(createdUser.email),
+    createdOn: new Date(createdUser.created_on).toISOString(),
     isAdmin: Boolean(createdUser.admin),
   };
   return { user, token: createSessionToken(user) };
@@ -192,7 +210,7 @@ const createSignedInSession = async (username: string): Promise<string> => {
 
 export const signInWithPassword = async (username: string, password: string): Promise<{ user: AuthUser; sessionId: string }> => {
   const existing = await query(
-    'SELECT public_user_id, username, email, admin, hashed_password FROM swimswam_user WHERE username = $1',
+    'SELECT public_user_id, username, email, created_on, admin, hashed_password FROM swimswam_user WHERE username = $1',
     [username],
   );
   const existingUser = existing.rows[0];
@@ -211,6 +229,7 @@ export const signInWithPassword = async (username: string, password: string): Pr
     publicUserId: String(existingUser.public_user_id),
     username: String(existingUser.username),
     email: String(existingUser.email),
+    createdOn: new Date(existingUser.created_on).toISOString(),
     isAdmin: Boolean(existingUser.admin),
   };
   return { user, sessionId };
@@ -263,9 +282,41 @@ export const updateSignedInSessionActivity = async (sessionId: string): Promise<
   return result.rowCount === 1;
 };
 
+export const updateUsername = async (currentUsername: string, newUsername: string): Promise<AuthUser> => {
+  if (profanityMatcher.hasMatch(newUsername)) {
+    throw new UpdateUsernameError('Username contains offensive words please use a diffrent username');
+  }
+
+  const existing = await query(
+    'SELECT username FROM swimswam_user WHERE username = $1',
+    [newUsername],
+  );
+  if (existing.rows.length > 0) {
+    throw new UpdateUsernameError('Username allready exists plese try a diffrent name');
+  }
+
+  const updated = await query(
+    `UPDATE swimswam_user SET username = $1 WHERE username = $2
+    RETURNING public_user_id, username, email, created_on, admin`,
+    [newUsername, currentUsername],
+  );
+  const updatedUser = updated.rows[0];
+  if (!updatedUser) {
+    throw new UpdateUsernameError('User not found');
+  }
+
+  return {
+    publicUserId: String(updatedUser.public_user_id),
+    username: String(updatedUser.username),
+    email: String(updatedUser.email),
+    createdOn: new Date(updatedUser.created_on).toISOString(),
+    isAdmin: Boolean(updatedUser.admin),
+  };
+};
+
 export const getUserBySessionId = async (sessionId: string): Promise<AuthUser | null> => {
   const result = await query(
-    `SELECT u.public_user_id, u.username, u.email, u.admin
+    `SELECT u.public_user_id, u.username, u.email, u.created_on, u.admin
      FROM signed_in_user s
      JOIN swimswam_user u ON u.username = s.username
      WHERE s.session_id = $1`,
@@ -277,6 +328,7 @@ export const getUserBySessionId = async (sessionId: string): Promise<AuthUser | 
     publicUserId: String(row.public_user_id),
     username: String(row.username),
     email: String(row.email),
+    createdOn: new Date(row.created_on).toISOString(),
     isAdmin: Boolean(row.admin),
   };
 };

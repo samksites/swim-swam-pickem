@@ -1,7 +1,6 @@
 import React, { useEffect }  from 'react';
 import SwitchLabel from '@/components/Switch';
 import Card from '@/components/Card';
-import Line from '@/components/ui/line';
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from '@/components/ui/input';
 import {
@@ -105,26 +104,26 @@ const ManageUsersView: React.FC = () => {
     const userRows = users.map((user) => (
         <div
             key={user.user_id}
-            className='bg-white rounded-lg px-3 py-2 w-full max-w-2xl mx-auto flex items-center justify-between gap-3 min-h-12'
+            className='rounded-md border border-slate-700 bg-slate-900 px-3 py-2 w-full max-w-2xl mx-auto flex items-center justify-between gap-3 min-h-12'
             data-user-id={user.user_id}
         >
-            <div className='text-gray-900 font-semibold min-w-0 truncate text-sm'>
+            <div className='text-white font-semibold min-w-0 truncate text-sm'>
                 {user.username}
             </div>
-            <div className='text-xs text-gray-700 whitespace-nowrap'>
+            <div className='text-xs text-slate-300 whitespace-nowrap'>
                 {user.admin ? 'Admin' : 'Regular user'}
             </div>
-            <Button type='button' variant='secondary' className='bg-blue-500 hover:bg-blue-600 text-white h-8 px-3 text-xs'>
+            <Button type='button' variant='outline' className='border-slate-700 bg-slate-800 text-white hover:bg-slate-700 h-8 px-3 text-xs'>
                 Edit
             </Button>
         </div>
     ));
 
     return (
-        <div className='flex flex-col w-full h-full min-h-[70vh]'>
-            <div className='flex flex-row justify-center items-center w-full mt-12 mb-8'>
+        <div className='flex flex-col w-full h-full min-h-[70vh] text-white'>
+            <div className='flex flex-row justify-center items-center w-full mt-8 mb-8 px-6'>
                 <Input
-                    className='w-1/2 text-white'
+                    className='w-full max-w-xl border-slate-700 bg-slate-900 text-white placeholder:text-slate-400'
                     placeholder='Search for users'
                     value={searchText}
                     onChange={(event) => setSearchText(event.target.value)}
@@ -132,7 +131,7 @@ const ManageUsersView: React.FC = () => {
             </div>
 
             <div className='flex-1'>
-                <ScrollArea className='w-full max-w-3xl mx-auto rounded-lg border-2 border-blue-900 h-[52vh] max-h-[calc(100vh-260px)] min-h-[260px] px-3 py-3'>
+                <ScrollArea className='w-full max-w-3xl mx-auto rounded-md border border-slate-700 bg-slate-900 h-[52vh] max-h-[calc(100vh-260px)] min-h-[260px] px-3 py-3'>
                     <div className='w-full flex flex-col gap-2'>
                         {userRows}
                     </div>
@@ -348,7 +347,7 @@ const CreateAndEditCompetition: React.FC = () => {
         setActiveTab(index);
     };
 
-    const tabsCss = "w-25 text-[8px] md:w-40 md:text-[14px]"
+    const tabsCss = "w-25 text-[8px] text-white hover:bg-slate-800 data-[state=active]:bg-white data-[state=active]:text-black md:w-40 md:text-[14px]"
     
     let content;
     if(activeTab === 0) {
@@ -362,7 +361,7 @@ const CreateAndEditCompetition: React.FC = () => {
     }
 
     return (
-        <div className='Flex flex-col w-full h-full'>
+        <div className='relative min-h-screen w-full bg-slate-950 text-white'>
             <ActivityTracker />
             <HamburgerMenu>
                 <Button
@@ -375,9 +374,13 @@ const CreateAndEditCompetition: React.FC = () => {
                 </Button>
             </HamburgerMenu>
 
-            <div className='flex flex-row justify-center items-center w-full mt-4 mb-4'>
-                <Tabs defaultValue="editComps" className="w-[400px] justify-center items-center">
-                    <TabsList>
+            <div className='w-full pt-8 px-6 text-center'>
+                <h1 className='text-4xl font-semibold'>Competition management</h1>
+            </div>
+
+            <div className='flex flex-row justify-center items-center w-full mt-8 mb-4 px-6'>
+                <Tabs defaultValue="editComps" className="w-full max-w-3xl justify-center items-center">
+                    <TabsList className='h-auto w-full flex-wrap justify-center gap-1 border border-slate-700 bg-slate-900 p-1'>
                         <TabsTrigger className={tabsCss} onClick={() => handleTabChange(0)} value="editComps">Edit competitions</TabsTrigger>
                         <TabsTrigger className={tabsCss} onClick={() => handleTabChange(1)} value="create">Create competitions</TabsTrigger>
                         <TabsTrigger className={tabsCss} onClick={() => handleTabChange(2)} value="updateLive">Live competitions</TabsTrigger>
@@ -386,7 +389,7 @@ const CreateAndEditCompetition: React.FC = () => {
                 </Tabs>
             </div>
 
-            <Line css={{width: 'full', height: '3px', background: '#03adfc', marginBottom: '2rem'}} />
+            <div className='mx-6 border-b border-slate-800' />
             { content }
         </div>
     );
@@ -529,11 +532,11 @@ const ViewCompetitions: React.FC<{ liveOnly?: boolean }> = ({ liveOnly = false }
     };
 
     return (
-        <div className='flex flex-col w-full h-full min-h-[70vh]'>
+            <div className='flex flex-col w-full h-full min-h-[70vh] text-white'>
 
-            <div className='flex flex-row justify-center items-center w-full mt-12 mb-8'>
+            <div className='flex flex-row justify-center items-center w-full mt-8 mb-8 px-6'>
              <Input
-                className='w-1/2 text-white'
+                className='w-full max-w-xl border-slate-700 bg-slate-900 text-white placeholder:text-slate-400'
                 placeholder='Search for competitions'
                 value={searchText}
                 onChange={(event) => setSearchText(event.target.value)}
@@ -542,7 +545,7 @@ const ViewCompetitions: React.FC<{ liveOnly?: boolean }> = ({ liveOnly = false }
            
 
             {liveOnly ? null : (
-                <div className='flex flex-row justify-center flex-wrap w-full'>
+                <div className='flex flex-row justify-center flex-wrap gap-2 w-full px-6'>
                     <SwitchLabel
                         label='Show active competitions'
                         checked={showActiveCompetitions}
@@ -570,7 +573,7 @@ const ViewCompetitions: React.FC<{ liveOnly?: boolean }> = ({ liveOnly = false }
                 </div>
             )}
             <div className='flex-1'>
-                <div className='flex flex-row justify-evenly flex-wrap w-full'>
+                <div className='flex flex-row justify-center gap-4 flex-wrap w-full px-6'>
                     {cards}
                 </div>
                 {loadError ? <p className='text-center text-red-300 mt-2'>{loadError}</p> : null}
@@ -1026,7 +1029,7 @@ const CompetitionEditor: React.FC<CompetitionEditorProps> = ({onClick }) => {
 
 
     return (
-        <div className='relative z-2 flex flex-col items-center min-h-80 rounded-md bg-gray-800 w-9/10 sm:min-h-150 h-auto mb-10'>
+        <div className='relative z-2 flex flex-col items-center min-h-80 rounded-md border border-slate-700 bg-slate-900 w-11/12 max-w-5xl sm:min-h-150 h-auto mb-10 px-4 sm:px-8'>
             <IoClose
                 className="absolute top-3 left-3 cursor-pointer text-blue-500 transition-transform duration-150 hover:scale-110"
                 size={32}

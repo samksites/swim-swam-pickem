@@ -114,9 +114,6 @@ const HomePage: React.FC = () => {
         {isAuthLoading ? null : currentUser ? (
           <>
             <div className='px-3 py-2 text-sm text-slate-300 truncate'>{currentUser.email}</div>
-            <Button type='button' variant='ghost' className='justify-start text-white hover:bg-slate-800 cursor-pointer' onClick={() => void handleSignOut()}>
-              Sign out
-            </Button>
           </>
         ) : (
           <Button type='button' variant='ghost' className='justify-start text-white hover:bg-slate-800 cursor-pointer' onClick={() => navigate('/sign-in')}>
@@ -126,9 +123,16 @@ const HomePage: React.FC = () => {
         <Button type='button' variant='ghost' className='justify-start text-white hover:bg-slate-800 cursor-pointer'>
           Search competition
         </Button>
-        <Button type='button' variant='ghost' className='justify-start text-white hover:bg-slate-800 cursor-pointer'>
-          User settings
-        </Button>
+        {currentUser ? (
+          <Button
+            type='button'
+            variant='ghost'
+            className='justify-start text-white hover:bg-slate-800 cursor-pointer'
+            onClick={() => navigate('/user-settings')}
+          >
+            User settings
+          </Button>
+        ) : null}
         {currentUser?.isAdmin ? (
           <Button
             type='button'
@@ -137,6 +141,11 @@ const HomePage: React.FC = () => {
             onClick={() => navigate('/adminPage')}
           >
             Admin seetings
+          </Button>
+        ) : null}
+        {currentUser ? (
+          <Button type='button' variant='ghost' className='justify-start text-white hover:bg-slate-800 cursor-pointer' onClick={() => void handleSignOut()}>
+            Sign out
           </Button>
         ) : null}
       </HamburgerMenu>

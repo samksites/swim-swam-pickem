@@ -2,6 +2,7 @@ export type AuthUser = {
   publicUserId: string;
   username: string;
   email: string;
+  createdOn: string;
   isAdmin: boolean;
 };
 
@@ -68,6 +69,17 @@ export const authApi = {
       credentials: 'include',
     });
     await parseResponse<null>(response);
+  },
+
+  updateUsername: async (username: string): Promise<AuthUser> => {
+    const response = await fetch(`${AUTH_API_URL}/username`, {
+      method: 'PATCH',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username }),
+    });
+    const payload = await parseResponse<AuthUser>(response);
+    return payload.data;
   },
 
   signOut: async (): Promise<void> => {
