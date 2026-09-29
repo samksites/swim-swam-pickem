@@ -5,5 +5,5 @@ CREATE TABLE signed_in_user (
     last_login TIMESTAMP NOT NULL,
     last_active TIMESTAMP NOT NULL,
     username VARCHAR(30) NOT NULL,
-    FOREIGN KEY (username) REFERENCES swimswam_user(username) ON DELETE CASCADE
+    FOREIGN KEY (username) REFERENCES swimswam_user(username) ON UPDATE CASCADE ON DELETE CASCADE
 );

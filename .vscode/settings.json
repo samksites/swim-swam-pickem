@@ -11,6 +11,7 @@
         "/^cd swim-swam-front-end && npm run build$/": {
             "approve": true,
             "matchCommandLine": true
-        }
+        },
+        "npx tsc": true
     }
 }

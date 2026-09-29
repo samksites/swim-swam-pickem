@@ -407,6 +407,16 @@ const EnterCompetition: React.FC = () => {
 				>
 					Home
 				</Button>
+				{currentUser ? (
+					<Button
+						type='button'
+						variant='ghost'
+						className='justify-start text-white hover:bg-slate-800 cursor-pointer'
+						onClick={() => navigate('/user-settings')}
+					>
+						User settings
+					</Button>
+				) : null}
 				{currentUser?.isAdmin ? (
 					<Button
 						type='button'

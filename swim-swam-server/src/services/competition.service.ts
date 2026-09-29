@@ -505,6 +505,26 @@ export class CompetitionService {
   }
 
   /**
+   * Get all competitions a user has entered (has a UserCompetitions row for).
+   */
+  async getCompetitionsEnteredByUser(publicUserId: number): Promise<any[]> {
+    try {
+      if (!Number.isInteger(publicUserId) || publicUserId <= 0) {
+        throw new CompetitionValidationError('publicUserId must be a positive integer.');
+      }
+
+      const result = await query(competitionQueries.getCompetitionsEnteredByUser, [publicUserId]);
+      return result.rows;
+    } catch (error) {
+      if (error instanceof CompetitionValidationError) {
+        throw error;
+      }
+
+      throw new Error(`Failed to get competitions entered by user: ${error}`);
+    }
+  }
+
+  /**
    * Save or update all picks for one user in one competition using swimmer IDs.
    */
   async saveUserCompetitionPicks(

@@ -61,6 +61,14 @@ export type SavedCompetitionPick = {
   predictedFourthId: number | null;
 };
 
+export type EnteredCompetitionListItem = {
+  comp_id: number;
+  title: string;
+  status: 'incomplete' | 'upcoming' | 'open' | 'current' | 'completed';
+  starts_on?: string;
+  entry_date?: string;
+};
+
 const API_BASE_URL = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, '') || '';
 const COMPETITIONS_API_URL = `${API_BASE_URL}/api/competitions`;
 
@@ -141,6 +149,18 @@ export const generalInfoApi = {
     });
 
     const payload = await parseApiResponse<SavedCompetitionPick[]>(response);
+    return payload.data;
+  },
+
+  getEnteredCompetitions: async (publicUserId: string): Promise<EnteredCompetitionListItem[]> => {
+    const response = await fetch(`${COMPETITIONS_API_URL}/public/user/${publicUserId}/entered`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    const payload = await parseApiResponse<EnteredCompetitionListItem[]>(response);
     return payload.data;
   },
 };
