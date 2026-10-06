@@ -63,6 +63,7 @@ export function Combobox({ options, baseValue, action }: ComboboxProps) {
                 <CommandItem
                   key={option.value}
                   value={option.value}
+                  className="cursor-pointer"
                   onSelect={(currentValue) => {
                     setValue(currentValue === value ? "" : currentValue)
                     setOpen(false)

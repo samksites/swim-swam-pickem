@@ -83,6 +83,7 @@ interface PersistedCompetition {
   starts_on: string;
   gender: CompetitionGender;
   meet_type: MeetType;
+  picks_per_event: number;
   days: PersistedDay[];
 }
 
@@ -94,6 +95,7 @@ interface CompetitionFullRow {
   starts_on: string | null;
   gender: CompetitionGender;
   meet_type: MeetType;
+  picks_per_event: number;
   day_id: number | null;
   day_title: string | null;
   day_order: number | null;
@@ -256,6 +258,11 @@ const normalizeCompetition = (input: CompetitionData): PersistedCompetition => {
   const entriesOpen = input.entries_open ?? input.entriesCloseDate ?? '';
   const startsOn = input.starts_on ?? input.startDate ?? '';
   const meetType = input.meet_type ?? input.type;
+  const picksPerEvent = input.picks_per_event ?? input.picksPerEvent ?? 4;
+
+  if (!Number.isInteger(picksPerEvent) || picksPerEvent < 1 || picksPerEvent > 4) {
+    throw new CompetitionValidationError('Picks per event must be an integer between 1 and 4.');
+  }
 
   const days = (input.days ?? []).map((day, dayIndex) => {
     const events = (day.events ?? []).map((event, eventIndex) => {
@@ -282,6 +289,15 @@ const normalizeCompetition = (input: CompetitionData): PersistedCompetition => {
     };
   });
 
+  const dayTitles = new Set<string>();
+  for (const day of days) {
+    const normalizedDayTitle = day.day_title.trim().toLowerCase();
+    if (dayTitles.has(normalizedDayTitle)) {
+      throw new CompetitionValidationError(`Day title "${day.day_title.trim()}" is duplicated. Each day must have a unique title.`);
+    }
+    dayTitles.add(normalizedDayTitle);
+  }
+
   return {
     title: input.title,
     entries_open: entriesOpen,
@@ -289,6 +305,7 @@ const normalizeCompetition = (input: CompetitionData): PersistedCompetition => {
     starts_on: startsOn,
     gender: mapGender(input.gender),
     meet_type: mapMeetType(meetType),
+    picks_per_event: picksPerEvent,
     days,
   };
 };
@@ -429,6 +446,8 @@ export class CompetitionService {
         gender: mapDbGenderToFrontend(firstRow.gender),
         type: mapDbTypeToFrontend(firstRow.meet_type),
         meet_type: firstRow.meet_type,
+        picksPerEvent: firstRow.picks_per_event ?? 4,
+        picks_per_event: firstRow.picks_per_event ?? 4,
         days,
       };
     } catch (error) {
@@ -553,6 +572,7 @@ export class CompetitionService {
       if (competitionResult.rows.length === 0) {
         throw new CompetitionValidationError('Competition not found.');
       }
+      const picksPerEvent = Number(competitionResult.rows[0].picks_per_event ?? 4);
 
       const userCompetitionResult = await client.query(competitionQueries.upsertUserCompetitionEntry, [
         publicUserId,
@@ -576,6 +596,9 @@ export class CompetitionService {
         const allProvidedIdsValid = providedIds.every((id) => Number.isInteger(id) && id > 0);
         if (!Number.isInteger(eventId) || eventId <= 0 || !allProvidedIdsValid) {
           throw new CompetitionValidationError('Each pick must include a valid eventId and optional valid swimmer IDs.');
+        }
+        if (providedIds.length > picksPerEvent) {
+          throw new CompetitionValidationError(`Each event allows at most ${picksPerEvent} swimmer picks.`);
         }
 
         if (new Set(providedIds).size !== providedIds.length) {
@@ -709,7 +732,8 @@ export class CompetitionService {
           competitionDataToPersist.status,
           competitionDataToPersist.starts_on,
           competitionDataToPersist.gender,
-          competitionDataToPersist.meet_type
+          competitionDataToPersist.meet_type,
+          competitionDataToPersist.picks_per_event
         ]);
 
         /**
@@ -733,16 +757,19 @@ export class CompetitionService {
 
         const days = competitionDataToPersist.days || [];
         const compID = Number(result.rows[0].comp_id);
-        const keepDayIds: number[] = [];
         const keepEventIds: number[] = [];
         const keepSwimmerIds: number[] = [];
 
-
-        for (let i = 0; i < days.length; i++) {
-          const day = days[i];
+        const dayEntries = days.map((day) => {
           const parsedDayId = Number(day.day_id);
           const dayID = Number.isFinite(parsedDayId) && parsedDayId > 0 ? parsedDayId : maxDayId++;
-          keepDayIds.push(dayID);
+          return { day, dayID };
+        });
+        const keepDayIds = dayEntries.map(({ dayID }) => dayID);
+        await client.query(competitionQueries.deleteMissingDaysForCompetition, [compID, keepDayIds]);
+
+        for (let i = 0; i < dayEntries.length; i++) {
+          const { day, dayID } = dayEntries[i];
 
           await client.query(competitionQueries.upsertCompetitionDay, [
             dayID,
@@ -783,7 +810,6 @@ export class CompetitionService {
 
         await client.query(competitionQueries.deleteMissingSwimmersForCompetition, [compID, keepSwimmerIds]);
         await client.query(competitionQueries.deleteMissingEventsForCompetition, [compID, keepEventIds]);
-        await client.query(competitionQueries.deleteMissingDaysForCompetition, [compID, keepDayIds]);
 
 
       // Commit transaction

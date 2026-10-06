@@ -74,6 +74,7 @@ router.get('/public/:id', async (req: Request, res: Response) => {
       id: String(competition.id ?? competition.comp_id ?? competitionId),
       title: competition.title,
       startDate: String(competition.startDate ?? competition.starts_on ?? ''),
+      picksPerEvent: competition.picksPerEvent ?? 4,
       days: (competition.days ?? []).map((day) => ({
         id: String(day.id ?? day.day_id ?? ''),
         title: String(day.title ?? day.day_title ?? ''),
@@ -284,6 +285,7 @@ router.post('/createMeet', extractUserId('body'), requireAdmin, async (req: Requ
             message: 'Competition created successfully',
             data: {
               ...competitionData,
+              picksPerEvent: competitionData.picksPerEvent ?? competitionData.picks_per_event ?? 4,
               id: String(newID),
               comp_id: String(newID)
             }
@@ -343,6 +345,7 @@ router.put('/update', extractUserId('body'), requireAdmin, async (req: Request, 
             message: 'Competition updated successfully',
             data: {
               ...req.body,
+              picksPerEvent: req.body.picksPerEvent ?? req.body.picks_per_event ?? 4,
               id: String(updatedCompetition),
               comp_id: String(updatedCompetition)
             }

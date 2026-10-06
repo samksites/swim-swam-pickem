@@ -5,6 +5,7 @@
     "status": 1,
     "entriesCloseDate": "",
     "startDate": "",
+    "picksPerEvent": 4,
     "gender": "m",
     "daysTitle": [],
     "allEvents":  {

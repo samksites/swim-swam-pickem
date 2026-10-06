@@ -55,6 +55,13 @@ export const useMeetStore = create<MeetStore>((set) => ({
       })
     ),
 
+  updatePicksPerEvent: (picksPerEvent: number) =>
+    set(
+      produce((state: MeetStore) => {
+        state.meetData.picksPerEvent = picksPerEvent;
+      })
+    ),
+
   // Update the meet type (distance)
   updateDistance: (distance: string) =>
     set(

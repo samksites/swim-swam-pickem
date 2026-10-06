@@ -37,6 +37,7 @@ export type EntryCompetitionData = {
   id: string;
   title: string;
   startDate: string;
+  picksPerEvent: number;
   days: EntryCompetitionDay[];
 };
 

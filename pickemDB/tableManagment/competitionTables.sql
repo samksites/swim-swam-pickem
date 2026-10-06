@@ -1,6 +1,6 @@
 -- Schema used by the current competition service payload.
 -- The service persists normalized competition data with:
--- title, entries_open, status, starts_on, gender, meet_type,
+-- title, entries_open, status, starts_on, gender, meet_type, picks_per_event,
 -- CompetitionDays(day_title, day_order), CompetitionEvent(event_title, event_order),
 -- and Swimmers(swimmer_time as text).
 
@@ -29,7 +29,8 @@ CREATE TABLE Competitions (
     status VARCHAR(20) DEFAULT 'incomplete' CHECK (status IN ('incomplete', 'upcoming', 'open', 'current', 'completed')),
     starts_on TIMESTAMP NOT NULL,
     gender CHAR(1) CHECK (gender IN ('M', 'W', 'B')),
-    meet_type VARCHAR(3) NOT NULL CHECK (meet_type IN ('SCY', 'SCM', 'LCM'))
+    meet_type VARCHAR(3) NOT NULL CHECK (meet_type IN ('SCY', 'SCM', 'LCM')),
+    picks_per_event SMALLINT NOT NULL DEFAULT 4 CHECK (picks_per_event BETWEEN 1 AND 4)
 );
 
 CREATE TABLE CompetitionDays (

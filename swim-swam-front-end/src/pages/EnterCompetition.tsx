@@ -14,7 +14,7 @@ import {
 	type SavedCompetitionPick,
 } from '@/services/generalInfoApi';
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import ActivityTracker from '@/components/ActivityTracker';
 import { authApi, type AuthUser } from '@/services/authApi';
 
@@ -49,10 +49,10 @@ const areSlotsEqual = (left: string[], right: string[]): boolean => {
 	return true;
 };
 
-const getCompletionStateFromSlots = (slots: string[]): CompletionState => {
+const getCompletionStateFromSlots = (slots: string[], requiredPickCount: number): CompletionState => {
 	const filledCount = slots.filter((name) => String(name ?? '').trim().length > 0).length;
 	if (filledCount === 0) return 'none';
-	if (filledCount >= REQUIRED_SWIMMER_PICKS) return 'complete';
+	if (filledCount >= requiredPickCount) return 'complete';
 	return 'partial';
 };
 
@@ -70,6 +70,7 @@ const getGlowClasses = (state: CompletionState): string => {
 
 const EnterCompetition: React.FC = () => {
 	const navigate = useNavigate();
+	const { competitionId } = useParams();
 	const [competition, setCompetition] = React.useState<EntryCompetitionData | null>(null);
 	const [loadError, setLoadError] = React.useState<string>('');
 	const [isLoading, setIsLoading] = React.useState<boolean>(true);
@@ -98,8 +99,7 @@ const EnterCompetition: React.FC = () => {
 		void run();
 	}, []);
 
-	// TODO: Replace with selected competition ID from app state/router params.
-	const selectedCompetitionId = '1';
+	const selectedCompetitionId = competitionId ?? '1';
 	const publicUserId = (import.meta.env.VITE_ADMIN_USER_ID as string | undefined)?.trim() ?? '';
 
 	React.useEffect(() => {
@@ -112,12 +112,12 @@ const EnterCompetition: React.FC = () => {
 				if (publicUserId) {
 					const savedPicks = await generalInfoApi.getSavedCompetitionPicks(selectedCompetitionId, publicUserId);
 					const nextEventPicks = savedPicks.reduce<Record<string, string[]>>((accumulator, pick: SavedCompetitionPick) => {
-						accumulator[String(pick.eventId)] = [
+						accumulator[String(pick.eventId)] = normalizeSlots([
 							normalizeSavedSlot(pick.predictedWinnerId),
 							normalizeSavedSlot(pick.predictedSecondId),
 							normalizeSavedSlot(pick.predictedThirdId),
 							normalizeSavedSlot(pick.predictedFourthId),
-						];
+						]).map((slot, index) => index < data.picksPerEvent ? slot : '');
 						return accumulator;
 					}, {});
 
@@ -189,8 +189,8 @@ const EnterCompetition: React.FC = () => {
 
 	const getEventState = React.useCallback((eventId: string): CompletionState => {
 		const slots = eventPicks[eventId] ?? ['', '', '', ''];
-		return getCompletionStateFromSlots(slots);
-	}, [eventPicks]);
+		return getCompletionStateFromSlots(slots, competition?.picksPerEvent ?? REQUIRED_SWIMMER_PICKS);
+	}, [competition?.picksPerEvent, eventPicks]);
 
 	const getDayState = React.useCallback((day: EntryCompetitionDay): CompletionState => {
 		if (day.events.length === 0) return 'none';
@@ -333,10 +333,10 @@ const EnterCompetition: React.FC = () => {
 		return (
 			<div className={`rounded-md border border-slate-700 bg-slate-900 px-4 py-4 transition-all duration-150 ${hasOpenSlotInEvent ? 'border-slate-200/80 shadow-[0_0_16px_rgba(255,255,255,0.25)]' : ''}`}>
 				<div className='space-y-3'>
-					{[0, 1, 2, 3].map((slotIndex) => {
+					{Array.from({ length: competition?.picksPerEvent ?? REQUIRED_SWIMMER_PICKS }, (_, slotIndex) => {
 						const slotLabel = slotIndex + 1;
 						const selectedSwimmerId = slots[slotIndex] ?? '';
-						const selectedSwimmerName = event.swimmers.find((swimmer) => swimmer.id === selectedSwimmerId)?.name ?? '';
+						const selectedSwimmer = event.swimmers.find((swimmer) => swimmer.id === selectedSwimmerId);
 						const availableSwimmers = getAvailableSwimmersForSlot(event, slotIndex);
 						const isSlotOpen = openSlotTarget?.eventId === event.id && openSlotTarget.slotIndex === slotIndex;
 
@@ -352,9 +352,14 @@ const EnterCompetition: React.FC = () => {
 									>
 										<div className='flex items-center gap-3 min-w-0'>
 											<span className='text-sm font-semibold text-slate-200 w-5'>{slotLabel}</span>
-											<span className='text-sm text-slate-100 truncate'>
-												{selectedSwimmerName || 'No swimmer selected'}
-											</span>
+											<div className='flex min-w-0 flex-1 items-center gap-2'>
+												<span className='min-w-0 flex-1 truncate text-sm text-slate-100'>
+													Name: {selectedSwimmer?.name ?? 'No swimmer selected'}
+												</span>
+												<span className='whitespace-nowrap text-xs text-slate-400'>
+													Time: {selectedSwimmer?.time || '—'}
+												</span>
+											</div>
 										</div>
 										{selectedSwimmerId ? (
 											<IoTrashOutline
@@ -380,7 +385,10 @@ const EnterCompetition: React.FC = () => {
 														className='cursor-pointer text-slate-100 data-[selected=true]:bg-slate-700 data-[selected=true]:text-white'
 														onSelect={() => selectSwimmerForSlot(event.id, slotIndex, swimmer.id)}
 													>
-														{swimmer.name}
+														<span className='min-w-0 truncate'>Name: {swimmer.name}</span>
+														<span className='ml-auto whitespace-nowrap text-xs text-slate-400'>
+															Time: {swimmer.time || 'No seed time'}
+														</span>
 													</CommandItem>
 												))}
 											</CommandGroup>
@@ -509,7 +517,7 @@ const EnterCompetition: React.FC = () => {
 				) : null}
 
 				{!isLoading && !loadError && viewMode === 'drilldown' && orderedDays.length > 0 && !selectedDay ? (
-					<div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+					<div className={orderedDays.length === 1 ? 'flex justify-center' : 'grid grid-cols-1 gap-4 md:grid-cols-2'}>
 						{orderedDays.map((day) => {
 							const dayState = getDayState(day);
 							const glowClasses = getGlowClasses(dayState);
@@ -521,7 +529,7 @@ const EnterCompetition: React.FC = () => {
 										setSelectedDayId(day.id);
 										setSelectedEventId('');
 									}}
-										className={`cursor-pointer rounded-md border bg-slate-900 px-4 py-4 transition-all duration-200 ease-out hover:shadow-[0_0_16px_rgba(255,255,255,0.25)] ${glowClasses}`}
+										className={`cursor-pointer rounded-md border bg-slate-900 px-4 py-4 transition-all duration-200 ease-out hover:shadow-[0_0_16px_rgba(255,255,255,0.25)] ${orderedDays.length === 1 ? 'w-full max-w-md' : ''} ${glowClasses}`}
 								>
 									<h2 className='text-lg font-semibold text-white'>{day.title || `Day ${day.dayOrder}`}</h2>
 									<p className='text-sm text-slate-300 mt-1'>Events: {day.events.length}</p>

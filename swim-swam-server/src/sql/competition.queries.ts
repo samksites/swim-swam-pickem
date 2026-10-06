@@ -13,7 +13,8 @@ export const queryCompetitionInfoUsers = {
       status,
       starts_on,
       gender,
-      meet_type
+      meet_type,
+      picks_per_event
     FROM Competitions
     ORDER BY starts_on DESC
   `,
@@ -27,7 +28,8 @@ export const queryCompetitionInfoUsers = {
       status,
       starts_on,
       gender,
-      meet_type
+      meet_type,
+      picks_per_event
     FROM Competitions
     WHERE comp_id = $1
   `,
@@ -41,7 +43,8 @@ export const queryCompetitionInfoUsers = {
       status,
       starts_on,
       gender,
-      meet_type
+      meet_type,
+      picks_per_event
     FROM Competitions
     WHERE status IN ('upcoming', 'open')
     ORDER BY starts_on ASC
@@ -57,7 +60,8 @@ export const queryCompetitionInfoUsers = {
       status,
       starts_on,
       gender,
-      meet_type
+      meet_type,
+      picks_per_event
     FROM Competitions
     WHERE status = $1
     ORDER BY starts_on DESC
@@ -72,6 +76,7 @@ export const queryCompetitionInfoUsers = {
       c.starts_on,
       c.gender,
       c.meet_type,
+      c.picks_per_event,
       d.day_id,
       d.day_title,
       d.day_order,
@@ -128,7 +133,8 @@ export const buildCompetitionsFilterQueries = (
         status,
         starts_on,
         gender,
-        meet_type
+        meet_type,
+        picks_per_event
       FROM Competitions
       ${whereClause}
       ORDER BY starts_on DESC
@@ -147,15 +153,16 @@ export const competitionQueries = {
 
   // Upsert competition (insert or update on conflict)
   upsertCompetition: `
-    INSERT INTO Competitions (comp_id, title, entries_open, status, starts_on, gender, meet_type)
-    VALUES ($1, $2, $3, $4, $5, $6, $7)
+    INSERT INTO Competitions (comp_id, title, entries_open, status, starts_on, gender, meet_type, picks_per_event)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
     ON CONFLICT (comp_id) DO UPDATE SET
       title = EXCLUDED.title,
       entries_open = EXCLUDED.entries_open,
       status = EXCLUDED.status,
       starts_on = EXCLUDED.starts_on,
       gender = EXCLUDED.gender,
-      meet_type = EXCLUDED.meet_type
+      meet_type = EXCLUDED.meet_type,
+      picks_per_event = EXCLUDED.picks_per_event
     RETURNING comp_id;
   `,
   insertCompetitionDay: `

@@ -5,6 +5,7 @@
     "status": 1,
     "entriesCloseDate": "2023-09-15",
     "startDate": "2023-10-06",
+    "picksPerEvent": 4,
     "gender": "c",
     "daysTitle": ["Day one", "Day two", "Day three"],
     "allEvents": {

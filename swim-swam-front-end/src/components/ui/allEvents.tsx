@@ -22,20 +22,20 @@ const AllEvents: React.FC<AllEventsProps> = ({ backArrow, dayIndex }) => {
     const availableEvents = Array.from(allEvents.entries()).map(([key, value]) => 
         value ? (
             <div className='w-full flex justify-center items-center' key={key}>
-                <div  onClick={() => {addEventToDay(dayIndex, key); backArrow();}} className='hover:bg-blue-400 hover:cursor-pointer m-2 rounded-md text-center border-2 w-3/4 flex flex-col justify-center items-center'>
+                <div  onClick={() => {addEventToDay(dayIndex, key); backArrow();}} className='m-2 w-3/4 flex flex-col justify-center items-center rounded-md border-2 bg-white text-center text-black hover:cursor-pointer hover:bg-gray-200 hover:text-black'>
                     {key}
                 </div>
             </div>
         ) : null 
     ) as React.ReactNode;
     return (
-        <div className='flex flex-col mt-4 justify-center items-center w-60 h-110 bg-white rounded-md mb-8'>
+        <div className='flex flex-col mt-4 justify-center items-center w-60 h-110 rounded-md mb-8'>
             <div className=' flex justify-start items-center w-full'>
                 <div className='hover:cursor-pointer hover:scale-110  -mt-8' onClick={backArrow}>
                     <ArrowLeft css={{ marginLeft: "8px" }} />
                 </div>
             </div>
-            <h2 className='text-2xl font-bold mb-4'>Available Events</h2>
+            <h2 className='text-2xl font-bold mb-4 text-white'>Available Events</h2>
             <ScrollArea className='w-9/10 h-3/4 flex flex-col justify-center items-center border-2 rounded-md -mt-2'>
                 {availableEvents}
             </ScrollArea>

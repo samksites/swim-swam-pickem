@@ -78,6 +78,7 @@ const SwimmerInput: React.FC<SwimmerInputProps> = (props) => {
         
             <Input
               type="text"
+              className="text-black"
               value={name}
               onChange={e => updateSwimmerName(props.dayIndex ?? 0, props.eventIndex ?? 0, props.index, e.target.value)}
               placeholder="Swimmer Name"
@@ -86,7 +87,7 @@ const SwimmerInput: React.FC<SwimmerInputProps> = (props) => {
             <div className="flex flex-row">
             <Input
               type="text"
-              className="mr-2"
+              className="mr-2 text-black"
               value={time}
               onChange={handleTimeChange}
               placeholder="00:00.00"
