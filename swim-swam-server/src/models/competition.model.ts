@@ -43,6 +43,8 @@ export interface CompetitionData {
   gender: string;
   type?: string;
   meet_type?: string;
+  picksPerEvent?: number;
+  picks_per_event?: number;
   days: CompetitionDay[];
 }
 

@@ -39,6 +39,7 @@ export type LoadedData = {
   days: Day[];
   entriesCloseDate: string;
   startDate: string;
+  picksPerEvent: number;
   title: string;
   status: number;
   gender: string;
@@ -55,6 +56,7 @@ export type MeetData = {
   days: Day[];
   entriesCloseDate: string;
   startDate: string;
+  picksPerEvent: number;
   title: string;
   status: number;
   gender: string;
@@ -74,6 +76,7 @@ export type MeetStore = {
     updateTitle: (title: string) => void;
   updateEntriesCloseDate: (date: string) => void;
   updateStartDate: (date: string) => void;
+  updatePicksPerEvent: (picksPerEvent: number) => void;
     updateDistance: (distance: string) => void;
     updateGender: (gender: string) => void;
     updateDayEventAndAllEvents: (dayIndex: number, eventTitle: string) => void;

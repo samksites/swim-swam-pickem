@@ -16,7 +16,8 @@ export const userQueries = {
                 status,
                 starts_on,
                 gender,
-                meet_type
+                meet_type,
+                picks_per_event
             FROM Competitions
             WHERE status = 'current'
             ORDER BY starts_on ASC

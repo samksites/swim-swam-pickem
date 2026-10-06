@@ -18,6 +18,7 @@ function App() {
       <InactivityManager />
       <Routes>
         <Route path='/' element={<HomePage />} />
+        <Route path='/enterCompetition/:competitionId' element={<EnterCompetition />} />
         <Route path='/enterCompetition' element={<EnterCompetition />} />
         <Route path='/sign-in' element={<SignIn />} />
         <Route path='/sign-in/password' element={<SignInWithPassword />} />

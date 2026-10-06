@@ -99,11 +99,18 @@ const checkCompetitionForSubmit = (swimMeet: MeetData) => {
     return { valid: false, message: errorMessage };
   }
 
+  const dayTitles = new Set<string>();
   for (let i = 0; i < swimMeet.days.length; i++) {
     if (swimMeet.days[i].title.trim() === "") {
       errorMessage = `Day ${i + 1} title is required.`;
       return { valid: false, message: errorMessage };
     }
+
+    const normalizedDayTitle = swimMeet.days[i].title.trim().toLowerCase();
+    if (dayTitles.has(normalizedDayTitle)) {
+      return { valid: false, message: `Day title "${swimMeet.days[i].title.trim()}" is duplicated. Each day must have a unique title.` };
+    }
+    dayTitles.add(normalizedDayTitle);
 
     if (swimMeet.days[i].events.length === 0) {
       errorMessage = `Day ${i + 1} has no events.`;
@@ -131,6 +138,7 @@ export const convertMeetData = (meet: LoadedData) => {
     days: meet.days,
     entriesCloseDate: meet.entriesCloseDate,
     startDate: meet.startDate,
+    picksPerEvent: meet.picksPerEvent ?? 4,
     title: meet.title,
     status: meet.status,
     gender: meet.gender,

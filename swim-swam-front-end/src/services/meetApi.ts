@@ -36,6 +36,7 @@ export type CompetitionEditorResponse = {
   title: string;
   entriesCloseDate?: string;
   startDate?: string;
+  picksPerEvent?: number;
   status: 'incomplete' | 'upcoming' | 'open' | 'current' | 'completed';
   gender: 'm' | 'w' | 'c';
   type: 'scy' | 'scm' | 'lcm';

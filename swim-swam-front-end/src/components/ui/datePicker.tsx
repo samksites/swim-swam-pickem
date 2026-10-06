@@ -29,7 +29,7 @@ export function DatePicker({ txt, savedDate, action, minDate }: DatePickerProps)
 
   return (
     <div className="flex flex-col gap-3">
-      <Label htmlFor="date" className="px-1 text-white">
+      <Label htmlFor="date" className="w-full justify-center px-1 text-center text-base font-semibold text-white">
         {txt}
       </Label>
       <Popover  open={open} onOpenChange={setOpen}>
@@ -37,7 +37,7 @@ export function DatePicker({ txt, savedDate, action, minDate }: DatePickerProps)
           <Button
             variant="outline"
             id="date"
-            className="w-48 justify-between font-normal cursor-pointer"
+            className="w-48 justify-between bg-white font-normal text-black cursor-pointer hover:bg-white hover:text-black"
           >
             {date ? date.toLocaleDateString() : "Select date"}
             <ChevronDownIcon />

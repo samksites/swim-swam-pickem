@@ -261,6 +261,7 @@ const competitionToMeetData = (competition: CompetitionEditorResponse): MeetData
         status: mapCompetitionStatusToMeetStatus(competition.status),
         entriesCloseDate: competition.entriesCloseDate ?? '',
         startDate: competition.startDate ?? '',
+        picksPerEvent: competition.picksPerEvent ?? 4,
         gender: competition.gender,
         daysTitle: normalizedDays.map((day) => day.title),
         days: normalizedDays,
@@ -692,6 +693,7 @@ const CompetitionEditorEventSettings: React.FC = () => {
             gender: string; // gender can be 'c', 'w', or 'm'
             startDate: string; // startDate is a string in the format 'YYYY-MM-DD'
             entriesCloseDate: string; // entriesCloseDate is a string in the format 'YYYY-MM-DD'
+            picksPerEvent: number;
             // add other properties if needed
         };
         updateDistance?: (distance: string) => void;
@@ -699,17 +701,20 @@ const CompetitionEditorEventSettings: React.FC = () => {
         updateTitle?: (title: string) => void;
         updateEntriesCloseDate?: (date: string) => void;
         updateStartDate?: (date: string) => void;
+        updatePicksPerEvent?: (picksPerEvent: number) => void;
     }
     const meetType: string = useMeetStore((state: MeetStoreState) => state.meetData.type);
     const meetTitle: string = useMeetStore((state: MeetStoreState) => state.meetData.title);
     const meetGender: string = useMeetStore((state: MeetStoreState) => state.meetData.gender);
     const meetStartDate: string = useMeetStore((state: MeetStoreState) => state.meetData.startDate);
     const entriesCloseDate: string = useMeetStore((state: MeetStoreState) => state.meetData.entriesCloseDate);
+    const picksPerEvent: number = useMeetStore((state: MeetStoreState) => state.meetData.picksPerEvent);
     const setMeetTitle = useMeetStore((state: MeetStoreState) => state.updateTitle);
     const setMeetDistance = useMeetStore((state: MeetStoreState) => state.updateDistance);
     const setMeetGender = useMeetStore((state: MeetStoreState) => state.updateGender);
     const setEntriesCloseDate = useMeetStore((state: MeetStoreState) => state.updateEntriesCloseDate);
     const setStartDate = useMeetStore((state: MeetStoreState) => state.updateStartDate);
+    const setPicksPerEvent = useMeetStore((state: MeetStoreState) => state.updatePicksPerEvent);
 
     const todayUtc = toUtcDateOnly(new Date());
     const minEntriesCloseDate = addDaysUtc(todayUtc, 1);
@@ -738,44 +743,54 @@ const CompetitionEditorEventSettings: React.FC = () => {
                     <h2 className='text-2xl text-center mt-6   text-white'>
                         Competition title   
                     </h2>
-                    <Input onChange={(e) => setMeetTitle?.(e.target.value)} value={meetTitle} placeholder={"Enter meet title"} className=' mt-5 -mb-4 w-100 bg-white'/>
+                    <Input onChange={(e) => setMeetTitle?.(e.target.value)} value={meetTitle} placeholder={"Enter meet title"} className=' mt-5 -mb-4 w-100 bg-white text-black'/>
                 </div>
                 
         
-        <div className='flex flex-col sm:flex-row justify-center flex-wrap items-center w-full mt-10 mb-4'>
-                
-                <div className="mt-5 mb-30 sm:ml-4 sm:mr-4 md:ml-10 md:mr-10 lg:ml-20 lg:mr-20">
-                    <Combobox
-                        options={[
-                            { value: 'scy', label: 'Short course yards' },
-                            { value: 'scm', label: 'Short course meters' },
-                            { value: 'lcm', label: 'Long course meters' }
-                        ]}
-                        baseValue={meetType}
-                        action={setMeetDistance}
-                    />
-                </div>
-                <div className="mt-5 mb-30 sm:ml-4 sm:mr-4 md:ml-10 md:mr-10 lg:ml-20 lg:mr-20">
-                    <Combobox options={[
-                        { value: 'c', label: 'Combined' },
-                        { value: 'w', label: 'Women' },
-                        { value: 'm', label: 'Men' }
-                    ]} 
-                        baseValue={meetGender}
-                        action={setMeetGender}
-                        
-                    />
-                </div>
-                <div className='w-full flex flex-col sm:flex-row items-center justify-center h-auto'>
-                    <div className='h-40 sm:ml-4 sm:mr-4 md:ml-10 md:mr-10 lg:ml-20 lg:mr-20'>
-                        <DatePicker txt='Competition entries close date' minDate={minEntriesCloseDate} savedDate={parseOptionalDate(entriesCloseDate)} action={setEntriesCloseDate}/>
-                    </div>
-                    
-                    <div className='h-40 sm:ml-4 sm:mr-4 md:ml-10 md:mr-10 lg:ml-20 lg:mr-20'>
-                        <DatePicker  txt='Competition start date' minDate={minStartDate} savedDate={parseOptionalDate(meetStartDate)} action={setStartDate}/>
-                    </div>
-                </div>
+        <div className='flex flex-col items-center w-full gap-7 mt-10 mb-4'>
+            <div className="flex flex-col items-center gap-2">
+                <h3 className="text-center font-semibold text-white">Distance</h3>
+                <Combobox
+                    options={[
+                        { value: 'scy', label: 'Short course yards' },
+                        { value: 'scm', label: 'Short course meters' },
+                        { value: 'lcm', label: 'Long course meters' }
+                    ]}
+                    baseValue={meetType}
+                    action={setMeetDistance}
+                />
             </div>
+            <div className="flex flex-col items-center gap-2">
+                <h3 className="text-center font-semibold text-white">Gender</h3>
+                <Combobox options={[
+                    { value: 'c', label: 'Combined' },
+                    { value: 'w', label: 'Women' },
+                    { value: 'm', label: 'Men' }
+                ]}
+                    baseValue={meetGender}
+                    action={setMeetGender}
+                />
+            </div>
+            <div className="flex flex-col items-center gap-2">
+                <h3 className="text-center font-semibold text-white">Picks per event</h3>
+                <Combobox
+                    options={[
+                        { value: '1', label: '1 swimmer' },
+                        { value: '2', label: '2 swimmers' },
+                        { value: '3', label: '3 swimmers' },
+                        { value: '4', label: '4 swimmers' }
+                    ]}
+                    baseValue={String(picksPerEvent ?? 4)}
+                    action={(value) => setPicksPerEvent?.(Number(value))}
+                />
+            </div>
+            <div className='w-[200px]'>
+                <DatePicker txt='Competition entries close date' minDate={minEntriesCloseDate} savedDate={parseOptionalDate(entriesCloseDate)} action={setEntriesCloseDate}/>
+            </div>
+            <div className='w-[200px]'>
+                <DatePicker txt='Competition start date' minDate={minStartDate} savedDate={parseOptionalDate(meetStartDate)} action={setStartDate}/>
+            </div>
+        </div>
         </div>
     );
 }
@@ -941,16 +956,28 @@ const CompetitionEditor: React.FC<CompetitionEditorProps> = ({onClick }) => {
         }
     };
 
-    const submitCompetitionAsUpcoming = async () => {
+    const submitCompetitionAsOpen = async () => {
         try {
             if (!ADMIN_USER_ID) {
                 throw new Error('Missing VITE_ADMIN_USER_ID. Set it in swim-swam-front-end/.env.local');
             }
 
-            await persistMeet(0);
+            const currentMeetData = useMeetStore.getState().meetData;
+            const dateValidation = validateCompetitionDates(currentMeetData.entriesCloseDate, currentMeetData.startDate);
+            const submitValidation = checkCompetitionForSubmit(currentMeetData);
+            if (!dateValidation.valid || !submitValidation.valid) {
+                setAlert?.({
+                    show: true,
+                    message: !dateValidation.valid ? dateValidation.message : submitValidation.message,
+                    confirmAction: () => {},
+                });
+                return;
+            }
+
+            await persistMeet(1);
             setAlert?.({
                 show: true,
-                message: "Competition submitted successfully. Status set to upcoming.",
+                message: "Competition submitted successfully. Status set to open, and users can now enter the meet.",
                 confirmAction: () => {
                     onClick?.();
                 },
@@ -1010,9 +1037,9 @@ const CompetitionEditor: React.FC<CompetitionEditorProps> = ({onClick }) => {
         if (submitValidation.valid) {
             setAlert?.({
                 show: true,
-                message: `You are about to submit the competition. You can still make changes until ${meetData.entriesCloseDate}.`,
+                message: 'Submitting will prevent further changes and allow users to start entering the meet. Do you want to continue?',
                 confirmAction: () => {
-                    void submitCompetitionAsUpcoming();
+                    void submitCompetitionAsOpen();
                 },
             });
         } else {
